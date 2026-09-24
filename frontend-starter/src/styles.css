@@ -27,6 +27,10 @@ button:disabled { opacity: 0.45; }
 .pager { margin: 1rem 0; }
 audio { width: 100%; }
 .error { color: #a33; }
+.success { color: #1d755e; font-weight: 500; }
+.field-error { color: #c0392b; font-size: 0.8rem; margin-top: -0.2rem; }
+.btn-logout { background: #b33939; padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 6px; }
+.btn-logout:hover { background: #962828; }
 
 @media (max-width: 720px) {
   header, .grid { display: block; }
