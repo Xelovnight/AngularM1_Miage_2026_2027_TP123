@@ -14,11 +14,18 @@ export class TrackService {
     });
   }
 
+  /**
+   * Envoie le fichier en multipart et émet tous les événements HTTP
+   * (Sent, UploadProgress, ResponseHeader, Response) pour suivre la progression.
+   */
   upload(file: File, title: string) {
     const body = new FormData();
     body.append('audio', file);
     body.append('title', title);
-    return this.http.post<Track>('/api/tracks', body);
+    return this.http.post<Track>('/api/tracks', body, {
+      reportProgress: true,
+      observe: 'events',
+    });
   }
 
   audio(id: string) {

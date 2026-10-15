@@ -17,19 +17,34 @@
 
       <label>
         Fichier audio (MP3, WAV, OGG, M4A — max 25 Mo)
-        <input #fileInput type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" (change)="choose($event)" />
+        <input
+          #fileInput
+          type="file"
+          accept="audio/*,.mp3,.wav,.ogg,.m4a"
+          (change)="choose($event)"
+          [disabled]="uploading()"
+        />
       </label>
 
       @if (fileError()) {
         <p class="field-error">{{ fileError() }}</p>
       }
 
-      @if (uploadError()) {
-        <p class="error">{{ uploadError() }}</p>
-      }
-
-      @if (uploadSuccess()) {
-        <p class="success">{{ uploadSuccess() }}</p>
+      @let state = uploadState();
+      @if (state.status === 'uploading') {
+        <div class="upload-progress">
+          @if (state.percent !== null) {
+            <progress max="100" [value]="state.percent" aria-label="Progression de l'envoi"></progress>
+            <span>{{ state.percent }} %</span>
+          } @else {
+            <progress aria-label="Progression de l'envoi"></progress>
+            <span>Envoi…</span>
+          }
+        </div>
+      } @else if (state.status === 'success') {
+        <p class="success">{{ state.message }}</p>
+      } @else if (state.status === 'error') {
+        <p class="error">{{ state.message }}</p>
       }
 
       <button

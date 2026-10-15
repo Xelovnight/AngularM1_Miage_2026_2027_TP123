@@ -1,6 +1,8 @@
-import { Component, inject, OnDestroy, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { HttpEventType } from '@angular/common/http';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Track } from '../../shared/models/track.model';
+import { UploadState } from '../../shared/models/upload-state.model';
 import { TrackService } from '../../shared/services/track.service';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 Mo
@@ -31,10 +33,9 @@ export class TracksPageComponent implements OnDestroy {
   readonly loading = signal(false);
   readonly error = signal('');
 
-  // État réactif de l'upload (Mission 3)
-  readonly uploading = signal(false);
-  readonly uploadSuccess = signal('');
-  readonly uploadError = signal('');
+  // État réactif de l'upload (Missions 3 et 6)
+  readonly uploadState = signal<UploadState>({ status: 'idle' });
+  readonly uploading = computed(() => this.uploadState().status === 'uploading');
   readonly fileError = signal('');
 
   // État réactif du lecteur audio (Mission 3)
@@ -63,8 +64,7 @@ export class TracksPageComponent implements OnDestroy {
   /** Sélection et validation préventive du fichier côté frontend */
   choose(event: Event): void {
     this.fileError.set('');
-    this.uploadError.set('');
-    this.uploadSuccess.set('');
+    this.uploadState.set({ status: 'idle' });
 
     const input = event.target as HTMLInputElement;
     const selected = input.files?.[0];
@@ -135,32 +135,53 @@ export class TracksPageComponent implements OnDestroy {
     this.load();
   }
 
-  /** Upload multipart avec FormData */
+  /**
+   * Upload multipart avec FormData et suivi de progression (Mission 6).
+   * Avec observe: 'events', l'Observable émet plusieurs événements :
+   * on met à jour le pourcentage sur UploadProgress et on ne traite la piste
+   * créée que sur l'événement Response final.
+   */
   upload(fileInput?: HTMLInputElement): void {
     if (!this.file || this.uploading()) return;
 
     const trackTitle = this.title.value.trim() || this.file.name;
-    this.uploading.set(true);
-    this.uploadError.set('');
-    this.uploadSuccess.set('');
+    this.uploadState.set({ status: 'uploading', percent: 0 });
+    // Reactive Forms : on désactive le FormControl plutôt que [disabled] dans le template
+    this.title.disable();
 
     this.service.upload(this.file, trackTitle).subscribe({
-      next: (track) => {
-        console.debug('[TracksPage] Piste envoyée :', track.id);
-        this.uploadSuccess.set(`Morceau « ${track.title} » importé avec succès !`);
-        this.uploading.set(false);
-        this.title.reset('');
-        this.file = undefined;
-        if (fileInput) fileInput.value = '';
+      next: (event) => {
+        if (event.type === HttpEventType.UploadProgress) {
+          // total peut être absent si le navigateur ne connaît pas la taille
+          const percent = event.total ? Math.round((100 * event.loaded) / event.total) : null;
+          this.uploadState.set({ status: 'uploading', percent });
+          return;
+        }
 
-        // Revenir en page 1 et recharger la liste pour voir le nouveau morceau
-        this.page.set(1);
-        this.load();
+        if (event.type === HttpEventType.Response) {
+          const track = event.body;
+          console.debug('[TracksPage] Piste envoyée :', track?.id);
+          this.uploadState.set({
+            status: 'success',
+            message: `Morceau « ${track?.title ?? trackTitle} » importé avec succès !`,
+          });
+          this.title.enable();
+          this.title.reset('');
+          this.file = undefined;
+          if (fileInput) fileInput.value = '';
+
+          // Revenir en page 1 et recharger la liste pour voir le nouveau morceau
+          this.page.set(1);
+          this.load();
+        }
       },
       error: (err: { error?: { message?: string } }) => {
         console.error('[TracksPage] Envoi impossible', err);
-        this.uploadError.set(err.error?.message ?? "Erreur lors de l'envoi du fichier.");
-        this.uploading.set(false);
+        this.uploadState.set({
+          status: 'error',
+          message: err.error?.message ?? "Erreur lors de l'envoi du fichier.",
+        });
+        this.title.enable();
       },
     });
   }

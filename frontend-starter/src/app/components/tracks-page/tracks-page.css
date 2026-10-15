@@ -249,3 +249,24 @@
   font-size: 0.9rem;
   color: #17312a;
 }
+
+/* Progression de l'upload (Mission 6) */
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.upload-progress progress {
+  flex: 1;
+  height: 0.6rem;
+  accent-color: #1d755e;
+}
+
+.upload-progress span {
+  min-width: 3rem;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #61756f;
+}
