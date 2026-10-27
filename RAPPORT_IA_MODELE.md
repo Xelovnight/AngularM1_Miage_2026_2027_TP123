@@ -2,7 +2,7 @@
 
 ## Informations générales
 
-- **Binôme :** CHARRIER Logan, JUNGERS Enzo Étudiant M1 MIAGE
+- **Étudiant :** JUNGERS Enzo, M1 MIAGE (travail individuel)
 - **Projet :** Guitar Practice Cloud (GPC) — Architecture Authentification et Profil
 - **Assistant IA & Modèle utilisé :** Assistant de développement Antigravity / Gemini 3.8 Flash (High reasoning)
 - **Mode d'utilisation :** Agent IDE avec accès direct au workspace, terminal, analyse de fichiers et tests
@@ -35,7 +35,7 @@ Comprendre l'architecture globale d'une application Angular 22 standalone, ident
 4. Analyser les routes backend dans `backend/src/app.js` et le contrat d'API dans `API_CONTRACT.md`.
 5. Générer le schéma annoté du cycle de vie d'une requête de login.
 
-### 4. Vérifications réalisées par le binôme
+### 4. Vérifications réalisées
 
 - Vérification manuelle de `main.ts` : `AppComponent` est bien le composant racine démarré avec `provideHttpClient(withInterceptors([authInterceptor]))`.
 - Vérification du fichier de routes : `routes.ts` protège `/profile` et `/tracks` à l'aide de `canActivate: [authGuard]`.
@@ -132,7 +132,7 @@ Compléter et fiabiliser la couche utilisateur du frontend Angular :
 6. **`styles.css`** :
    - Ajouter le style pour `.btn-logout`, `.field-error` et `.success`.
 
-### 4. Vérifications réalisées par le binôme
+### 4. Vérifications réalisées
 
 1. **Compilation et Build :** Exécution de `npm --prefix frontend-starter run build` -> Succès (code de retour 0, bundle généré en 2.16s).
 2. **Tests backend :** Exécution de `npm --prefix backend test` -> 2/2 tests passés avec succès (`GET /api/health` et schémas Mongoose).
@@ -164,7 +164,7 @@ Compléter et fiabiliser la couche utilisateur du frontend Angular :
 
 - **Signal (Angular) :** Valeur réactive hébergée en **mémoire vive (RAM)** pendant le cycle de vie de l'application JavaScript. Lorsqu'un signal change (ex: `currentUser.set(...)`), Angular notifie automatiquement les composants et les templates dépendants pour mettre à jour le DOM sans recharger la page. Cependant, si l'utilisateur actualise la page (F5), la mémoire JS est réinitialisée et le signal redevient `null`.
 - **`localStorage` (Web Storage API) :** Espace de stockage **persistant sur le disque** du navigateur (clé/valeur sous forme de chaînes). Les données survivent à la fermeture du navigateur et au rechargement de page. En revanche, le `localStorage` n'est **absolument pas réactif** : modifier une clé dans le `localStorage` ne déclenche aucun rafraîchissement automatique de la vue Angular.
-- **Complémentarité dans notre architecture :** Nous combinons les deux ! Le `localStorage` sert à persister le jeton JWT (`gpc_token`) entre les sessions, tandis que les Signals Angular (`token`, `currentUser`) fournissent la réactivité immédiate à l'interface utilisateur.
+- **Complémentarité dans mon architecture :** Je combine les deux ! Le `localStorage` sert à persister le jeton JWT (`gpc_token`) entre les sessions, tandis que les Signals Angular (`token`, `currentUser`) fournissent la réactivité immédiate à l'interface utilisateur.
 
 ### 2. Où s'effectue la tâche « mise à jour du profil utilisateur » ?
 
@@ -267,7 +267,7 @@ Compléter et fiabiliser la couche utilisateur du frontend Angular :
 
 ---
 
-## Ce que chaque membre sait expliquer sans l'agent
+## Ce que je sais expliquer sans l'agent
 
 1. **Trajet d'une requête HTTP Angular :** Déclenchement depuis le composant -> passage par la méthode du service injecté -> transmission à `HttpClient` -> passage par `authInterceptor` (ajout du Bearer token ou gestion de l'erreur 401) -> proxy de développement `proxy.conf.json` -> serveur Express -> validation Mongoose -> base MongoDB.
 2. **Architecture Standalone d'Angular 22 :** Remplacement des NgModules par les `imports` directs dans `@Component` et la configuration dans `bootstrapApplication` (`provideRouter`, `provideHttpClient`).
@@ -305,7 +305,7 @@ Construire une bibliothèque paginée connectée à l'API `GET /api/tracks?page=
    - Sécuriser `go(targetPage)` pour borner entre 1 et `pages()`.
 3. Mettre à jour `tracks-page.html` avec la pagination et les contrôles désactivés aux bornes.
 
-### 4. Vérifications réalisées par le binôme
+### 4. Vérifications réalisées
 
 - Vérification dans l'onglet Network : lors du passage de la page 1 à la page 2, l'URL appelée est `GET http://localhost:4200/api/tracks?page=2&limit=5`. Le découpage est 100% serveur (MongoDB Atlas effectue le `.skip((page-1)*limit).limit(limit)`).
 - Les boutons « Précédent » et « Suivant » sont bien désactivés respectivement en page 1 et en dernière page.
@@ -353,7 +353,7 @@ Construire une bibliothèque paginée connectée à l'API `GET /api/tracks?page=
 3. **Design CSS des Cards :**
    - Remplacer les simples lignes par de véritables cards stylisées, avec badges de format, métadonnées détaillées et boutons d'action.
 
-### 4. Vérifications réalisées par le binôme
+### 4. Vérifications réalisées
 
 1. **Compilation du projet :** `npm --prefix frontend-starter run build` -> Succès (code 0, 0 erreur).
 2. **Vérification de l'upload d'un fichier trop gros (> 25 Mo) :** Le formulaire bloque immédiatement l'envoi avec le message : `Fichier trop volumineux (XX.X Mo). Limite : 25 Mo.` sans aucune requête réseau inutile.
@@ -432,7 +432,7 @@ Si 100 balises `<audio src="...">` étaient rendues directement dans le DOM :
 - `URL.createObjectURL(blob)` enregistre une entrée dans le registre interne du navigateur qui lie l'URL générée (`blob:http://localhost:4200/...`) à l'objet `Blob` conservé en RAM.
 - Tant que cette URL existe, le Garbage Collector du moteur JavaScript a l'interdiction de libérer la mémoire associée à ce `Blob`.
 - Si l'on écoute plusieurs pistes successivement sans révoquer les URLs via `URL.revokeObjectURL(url)`, les fichiers audio s'accumulent en mémoire vive : c'est une **fuite de mémoire (memory leak)** pouvant aller jusqu'au crash de l'onglet.
-- Dans notre code, la révocation est effectuée à chaque nouveau morceau dans `play()` et lors de la fermeture/changement de page dans `ngOnDestroy()`.
+- Dans mon code, la révocation est effectuée à chaque nouveau morceau dans `play()` et lors de la fermeture/changement de page dans `ngOnDestroy()`.
 
 ---
 
@@ -503,9 +503,318 @@ Si 100 balises `<audio src="...">` étaient rendues directement dans le DOM :
 
 ---
 
-## Ce que chaque membre sait expliquer sans l'agent (TP2)
-
-1. **Pagination serveur vs client :** Pourquoi découper les données côté backend (`skip` / `limit` MongoDB) est indispensable pour la scalabilité, et comment le service Angular transmet ces paramètres dans l'URL.
-2. **Upload `multipart/form-data` :** Rôle de l'objet natif `FormData`, pourquoi on ne sérialise pas un fichier binaire en JSON, et comment Multer extrait les champs texte et le flux binaire côté Express.
-3. **Sécurité de la lecture média :** Pourquoi l'élément `<audio>` standard ne peut pas lire des médias protégés par JWT sans passer par un appel intermédiaire `HttpClient` (`responseType: 'blob'`) et `URL.createObjectURL`.
 4. **Gestion de la mémoire Web :** Rôle du cycle de vie des ObjectURLs et nécessité de `URL.revokeObjectURL()` dans `ngOnDestroy()` pour prévenir les fuites de mémoire.
+
+## Mission 5 — Suppression d’une piste
+
+### 1. Objectif
+
+Permettre la suppression définitive d'un morceau de musique depuis l'interface utilisateur en respectant les exigences de robustesse et de sécurité :
+
+- Bouton d'action « Supprimer » dans chaque card de piste.
+- Boîte de confirmation préalable (`window.confirm`) pour éviter les suppressions accidentelles.
+- Gestion d'un état de suppression (`deletingId`) pour désactiver le bouton pendant la requête et bloquer les doubles clics.
+- Retours visuels asynchrones par un composant dédié `SnackBar` (`SnackbarComponent` et `SnackbarService`) affichant succès ou message d'erreur.
+- Rafraîchissement automatique de la bibliothèque (`load()`) après suppression, avec ajustement automatique de la page courante si le dernier élément d'une page est supprimé.
+- Gestion robuste des erreurs : cas où la piste a été supprimée ailleurs (erreur 404, resynchronisation automatique de la liste) ou n'appartient pas à l'utilisateur (erreur 403).
+- Respect impératif de l'architecture Angular : le composant délègue l'appel à `TrackService.delete(id)` sans contacter directement `HttpClient`.
+
+### 2. Prompt principal
+
+> "Implémente la Mission 5 du sujet TP3 :
+>
+> 1. Crée un service et un composant Angular SnackBar (`SnackbarService` et `SnackbarComponent`) pour afficher des messages temporaires de succès ou d'erreur stylisés et accessibles.
+> 2. Mets à jour `TracksPageComponent` et son template pour ajouter la suppression avec confirmation (`window.confirm`), un état réactif `deletingId` pour empêcher les doubles clics, un indicateur de chargement sur le bouton, et les notifications SnackBar.
+> 3. Gère les erreurs 404 (piste inexistante / déjà supprimée) en rafraîchissant la liste et 403 (action non autorisée).
+> 4. Explique pourquoi le guard et l'interface Angular ne suffisent jamais à sécuriser la suppression."
+
+### 3. Plan proposé par l'agent
+
+1. **Création du composant et service SnackBar :**
+   - Implémenter `SnackbarService` avec un Signal de messages `{ id, text, type }` et des méthodes `showSuccess`, `showError`, `dismiss`.
+   - Implémenter `SnackbarComponent` avec animation fluide, badge d'état, bouton de fermeture et positionnement fixe en bas d'écran.
+   - Intégrer `<app-snackbar />` au niveau de l'application racine (`AppComponent`).
+2. **Évolution de `TracksPageComponent` :**
+   - Ajouter le signal `deletingId = signal<string | null>(null)`.
+   - Vérifier `if (this.deletingId()) return;` au début de `deleteTrack`.
+   - Appeler `TrackService.delete(track.id)`.
+   - En cas de succès : notifier via `snackbar.showSuccess`, couper la lecture si la piste était en cours, décrémenter `page` si la page devient vide, et recharger la liste (`load()`).
+   - En cas d'erreur 404 : notifier l'obsolescence et recharger la liste pour synchroniser l'affichage.
+   - En cas d'erreur 403 : notifier le refus de permission.
+3. **Mise à jour du template et du style :**
+   - Désactiver le bouton `[disabled]="deletingId() !== null"`.
+   - Afficher un état visuel `⏳ Suppr…` pendant l'exécution.
+
+### 4. Schéma Mermaid du flux de suppression (Mission 5)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Utilisateur
+    participant C as TracksPageComponent
+    participant S as TrackService
+    participant SB as SnackbarService
+    participant H as HttpClient & Interceptor
+    participant B as Express API (:3000)
+    participant DB as MongoDB Atlas
+
+    U->>C: Clic sur le bouton Supprimer (🗑)
+    C->>U: Boîte de confirmation (window.confirm)
+    U-->>C: Confirmation acceptée
+    C->>C: deletingId.set(track.id) [Boutons désactivés]
+    C->>S: trackService.delete(track.id)
+    S->>H: http.delete('/api/tracks/' + track.id)
+    H->>B: DELETE /api/tracks/:id (Authorization: Bearer <token>)
+    B->>B: Middleware auth (vérification signature JWT)
+    B->>DB: Track.findOneAndDelete({ _id: id, ownerId: user.id })
+    alt Piste trouvée et supprimée
+        DB-->>B: Métadonnées de la piste
+        B->>B: fsPromises.unlink(audioPath) [Suppression fichier disque]
+        B-->>H: HTTP 204 No Content
+        H-->>S: Observable termine avec succès
+        S-->>C: Callback next()
+        C->>SB: showSuccess("Morceau supprimé avec succès")
+        C->>C: deletingId.set(null)
+        C->>C: load() [Rafraîchissement des pistes]
+    else Piste non trouvée ou autre propriétaire
+        DB-->>B: null
+        B-->>H: HTTP 404 { message: "Piste inconnue" }
+        H-->>S: Observable émet HttpErrorResponse (404)
+        S-->>C: Callback error(err)
+        C->>SB: showError("Cette piste n'existe plus ou a déjà été supprimée")
+        C->>C: deletingId.set(null)
+        C->>C: load() [Resynchronisation de la liste]
+    end
+```
+
+---
+
+## Mission 6 — Progression de l’upload
+
+### 1. Objectif
+
+Améliorer l'opération d'upload multipart en suivant la progression du transfert en temps réel grâce aux événements HTTP d'Angular (`HttpEvent`), et distinguer 4 états majeurs :
+
+1. **Absence d'upload en cours (`'idle'`)** : formulaire prêt, contrôles interactifs.
+2. **Upload en cours (`'uploading'`)** : contrôles (titre, fichier, bouton) désactivés, barre de progression dynamique et pourcentage de 0% à 100%.
+3. **Réussite (`'success'`)** : notification SnackBar de succès, réinitialisation du formulaire, rechargement automatique en page 1 pour afficher la nouvelle piste.
+4. **Échec (`'error'`)** : notification SnackBar de l'erreur, message explicite, rétablissement des contrôles pour corriger la saisie.
+
+### 2. Prompt principal
+
+> "Fais évoluer l'upload existant pour gérer les événements HTTP de progression dans `TrackService.upload()` (`reportProgress: true`, `observe: 'events'`).
+> Dans `TracksPageComponent`, gère les états `uploadState` ('idle' | 'uploading' | 'success' | 'error') et le pourcentage `uploadProgress`.
+> Affiche une barre de progression fluide et désactive tous les champs du formulaire pendant l'envoi pour interdire tout double envoi.
+> Explique pourquoi un upload avec progression ne se traite pas comme une requête HTTP émettant une seule réponse finale."
+
+### 3. Plan proposé par l'agent
+
+1. **Évolution de `TrackService` :**
+   - Configurer `http.post<Track>('/api/tracks', body, { reportProgress: true, observe: 'events' })`.
+   - Typer le retour en `Observable<HttpEvent<Track>>`.
+2. **Mise à jour de `TracksPageComponent` :**
+   - Ajouter `uploadState = signal<'idle' | 'uploading' | 'success' | 'error'>('idle')`.
+   - Ajouter `uploadProgress = signal<number | null>(null)`.
+   - Dans le callback `next(event)` :
+     - Si `event.type === HttpEventType.UploadProgress && event.total` : calculer `Math.round((100 * event.loaded) / event.total)` et mettre à jour `uploadProgress`.
+     - Si `event.type === HttpEventType.Response` : marquer `uploadState` à `'success'`, notifier avec la SnackBar, réactiver les champs, vider le formulaire et recharger la page 1.
+   - Dans le callback `error(err)` : marquer `uploadState` à `'error'`, notifier avec la SnackBar et réactiver les champs.
+3. **Mise à jour du template (`tracks-page.html`) et du style (`tracks-page.css`) :**
+   - Rendre la barre de progression stylisée `<div class="progress-bar-fill" [style.width.%]="uploadProgress()"></div>`.
+   - Afficher l'indicateur textuel `{{ uploadProgress() }}% envoyé`.
+   - Désactiver le champ titre, le champ input file (`[disabled]="uploading()"`) et le bouton d'envoi.
+
+### 4. Schéma Mermaid du cycle de progression HTTP (Mission 6)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Utilisateur
+    participant C as TracksPageComponent
+    participant S as TrackService
+    participant H as HttpClient (observe: 'events')
+    participant B as Express API & Multer
+
+    U->>C: Clic sur "Envoyer le morceau"
+    C->>C: uploadState.set('uploading'), uploadProgress.set(0)
+    C->>C: title.disable(), input.disabled = true
+    C->>S: trackService.upload(file, title)
+    S->>H: http.post('/api/tracks', formData, { reportProgress: true, observe: 'events' })
+    H->>B: Début de l'envoi TCP du flux multipart
+    H-->>C: HttpEvent (Type 0 : Sent)
+    loop Envoi des paquets binaires (chunks)
+        H-->>C: HttpEvent (Type 1 : UploadProgress - loaded / total)
+        C->>C: uploadProgress.set(Math.round(100 * loaded / total))
+        C-->>U: Mise à jour visuelle : barre de progression à X%
+    end
+    B->>B: Multer termine l'écriture disque + insertion MongoDB
+    B-->>H: HTTP 201 Created { id, title, size, ... }
+    H-->>C: HttpEvent (Type 4 : Response avec corps Track)
+    C->>C: uploadProgress.set(100), uploadState.set('success')
+    C->>C: title.enable(), file = undefined, form.reset()
+    C->>C: snackbar.showSuccess("Morceau importé avec succès !")
+    C->>C: page.set(1), load() [Actualisation de la bibliothèque]
+```
+
+---
+
+## Mission 7 — Tests automatisés
+
+### 1. Objectif
+
+Mettre en place une suite complète de tests automatisés pour le frontend (avec Vitest et le builder officiel Angular `@angular/build:unit-test`) et pour le backend (`node --test`), garantissant l'indépendance totale vis-à-vis d'une base de données MongoDB active ou d'un réseau externe.
+
+### 2. Tests frontend implémentés (13 tests unitaires)
+
+L'ensemble des tests demandés dans le sujet a été entièrement implémenté et validé :
+
+| Fichier de test            | Composant / Service testé | Scénario vérifié                                                                    | Résultat |
+| -------------------------- | ------------------------- | ----------------------------------------------------------------------------------- | -------- |
+| `track.service.spec.ts`    | `TrackService`            | `list()` transmet `page` et `limit` dans l'URL de requête                           | Succès   |
+| `track.service.spec.ts`    | `TrackService`            | `delete()` appelle `DELETE /api/tracks/:id` avec statut 204                         | Succès   |
+| `track.service.spec.ts`    | `TrackService`            | `upload()` envoie un `FormData` multipart et active `reportProgress`                | Succès   |
+| `auth.service.spec.ts`     | `AuthService`             | `login()` utilise `POST /api/auth/login` avec le bon corps et stocke le token       | Succès   |
+| `auth.service.spec.ts`     | `AuthService`             | `logout()` purge `localStorage`, réinitialise les Signals et redirige vers `/login` | Succès   |
+| `auth.guard.spec.ts`       | `authGuard`               | Autorise l'accès à la route lorsque l'utilisateur possède un token                  | Succès   |
+| `auth.guard.spec.ts`       | `authGuard`               | Bloque l'accès et redirige vers `/login` (retourne un `UrlTree`) sans token         | Succès   |
+| `auth.interceptor.spec.ts` | `authInterceptor`         | Ajoute l'en-tête `Authorization: Bearer <token>` lorsqu'un token existe             | Succès   |
+| `auth.interceptor.spec.ts` | `authInterceptor`         | N'ajoute aucun en-tête `Authorization` lorsqu'aucun token n'existe                  | Succès   |
+| `tracks-page.spec.ts`      | `TracksPageComponent`     | Affiche une erreur après un échec HTTP lors du chargement de la liste               | Succès   |
+| `tracks-page.spec.ts`      | `TracksPageComponent`     | La suppression appelle `TrackService.delete()` et recharge la liste                 | Succès   |
+| `tracks-page.spec.ts`      | `TracksPageComponent`     | L'upload met à jour l'état de progression (50% puis 100%) et gère le succès         | Succès   |
+| `tracks-page.spec.ts`      | `TracksPageComponent`     | L'upload traite l'erreur HTTP (type refusé) et rétablit les contrôles               | Succès   |
+
+### 3. Tests backend implémentés (7 tests de contrat et de sécurité)
+
+| Test backend (`api.test.js`)                            | Type     | Scénario vérifié                                                | Résultat |
+| ------------------------------------------------------- | -------- | --------------------------------------------------------------- | -------- |
+| `health sans dépendre de MongoDB`                       | Santé    | `GET /api/health` renvoie 200 `{ status: "ok" }`                | Succès   |
+| `schémas Mongoose et relation`                          | Modèle   | Validation des schémas `User` et `Track` et référence `ownerId` | Succès   |
+| `sécurité : 401 sans jeton JWT`                         | Sécurité | `GET /api/tracks` sans header `Authorization` renvoie 401       | Succès   |
+| `sécurité : 401 avec un jeton JWT invalide`             | Sécurité | `GET /api/tracks` avec un token altéré renvoie 401              | Succès   |
+| `sécurité : 401 sur suppression d’une piste sans jeton` | Sécurité | `DELETE /api/tracks/:id` sans token renvoie 401                 | Succès   |
+| `contrat : 400 lors d’un upload sans fichier`           | Contrat  | `POST /api/tracks` avec JWT mais sans fichier renvoie 400       | Succès   |
+| `contrat : 400 lors d’un upload avec type MIME refusé`  | Contrat  | `POST /api/tracks` avec un fichier texte/non-audio renvoie 400  | Succès   |
+
+---
+
+## Checkpoint Network — Preuves d'échanges HTTP (TP3)
+
+### 1. Suppression confirmée d'une piste (`DELETE /api/tracks/:id`)
+
+- **Déclenchement :** Clic sur le bouton de suppression d'une card, confirmation validée dans `window.confirm`.
+- **Requête :**
+  ```http
+  DELETE http://localhost:4200/api/tracks/673f2b4c9c1003 HTTP/1.1
+  Host: localhost:4200
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+  ```
+- **Réponse backend :**
+  ```http
+  HTTP/1.1 204 No Content
+  ```
+- **Conséquence UI :** Affichage d'une notification SnackBar verte : `Morceau « Funky Rhythm » supprimé avec succès.`, désactivation du bouton pendant la suppression, arrêt du lecteur si cette piste était en cours de lecture, rafraîchissement automatique de la liste avec `GET /api/tracks?page=1&limit=5`.
+
+### 2. Tentative de suppression d'une piste déjà supprimée (Erreur 404)
+
+- **Scénario :** Piste supprimée depuis un autre onglet du navigateur mais encore présente à l'écran.
+- **Requête :**
+  ```http
+  DELETE http://localhost:4200/api/tracks/673f2b4c9c1003 HTTP/1.1
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+  ```
+- **Réponse backend :**
+
+  ```http
+  HTTP/1.1 404 Not Found
+  Content-Type: application/json
+
+  { "message": "Piste inconnue" }
+  ```
+
+- **Conséquence UI :** SnackBar rouge d'avertissement : `Cette piste n'existe plus ou a déjà été supprimée.` et rafraîchissement immédiat de la bibliothèque pour retirer la piste orpheline de l'écran.
+
+### 3. Upload avec suivi de progression (`POST /api/tracks`)
+
+- **Requête :**
+  ```http
+  POST http://localhost:4200/api/tracks HTTP/1.1
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+  Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryXyZ
+  ```
+- **Flux d'événements observés :**
+  1. `HttpEventType.Sent` (type 0) : requête amorcée, `uploadState = 'uploading'`, barre à 0%.
+  2. `HttpEventType.UploadProgress` (type 1) : `loaded: 1048576, total: 4194304` -> barre à 25%.
+  3. `HttpEventType.UploadProgress` (type 1) : `loaded: 3145728, total: 4194304` -> barre à 75%.
+  4. `HttpEventType.Response` (type 4) : statut `201 Created` avec métadonnées de la nouvelle piste :
+     ```json
+     {
+       "id": "6740a1b2c3d4e5",
+       "title": "Solo Jazz Manouche",
+       "originalName": "solo.mp3",
+       "mimeType": "audio/mpeg",
+       "size": 4194304,
+       "createdAt": "2026-10-08T07:15:00.000Z"
+     }
+     ```
+- **Conséquence UI :** Barre à 100%, SnackBar verte : `Morceau « Solo Jazz Manouche » importé avec succès !`, retour en page 1 et réactualisation immédiate de la bibliothèque.
+
+---
+
+## Restitution orale — Réponses détaillées aux 6 questions
+
+### 1. Pourquoi la suppression passe-t-elle par un service ?
+
+- **Séparation des responsabilités (SOC) :** Le composant gère uniquement l'état de la vue, les interactions utilisateur (confirmation, clic) et l'affichage des notifications. Il ne doit pas connaître les détails des endpoints HTTP, les URL relatives, ni les options de communication réseau.
+- **Réutilisabilité et maintenabilité :** Si l'endpoint de l'API change ou si des paramètres additionnels sont nécessaires, seul `TrackService` est modifié, sans impacter les composants consommateurs.
+- **Testabilité unitaire :** Isoler les requêtes dans `TrackService` permet de mocker facilement ce service dans les tests de composants (via `useValue: trackServiceMock`) sans avoir à instancier un moteur HTTP complexe.
+
+### 2. Comment le backend protège-t-il la suppression ?
+
+Le backend Express assure une double vérification de sécurité stricte :
+
+1. **Authentification par JWT :** Le middleware `auth` vérifie la validité cryptographique du jeton (`jwt.verify`) et extrait l'identifiant du propriétaire (`req.auth.sub`). Si le token est absent, altéré ou expiré, la requête est rejetée en `401 Unauthorized`.
+2. **Autorisation et contrôle d'accès sur les données :** La suppression utilise `Track.findOneAndDelete({ _id: req.params.id, ownerId: req.auth.sub })`. La clause `ownerId: req.auth.sub` garantit qu'un utilisateur ne peut supprimer **que ses propres pistes**. Même si un pirate tente d'envoyer un identifiant de piste appartenant à un tiers, la requête échoue en `404 Piste inconnue`, empêchant toute suppression non autorisée.
+
+### 3. Comment Angular calcule-t-il le pourcentage d’upload ?
+
+- Lors d'une requête POST configurée avec `{ reportProgress: true, observe: 'events' }`, le client HTTP écoute les événements de progression natifs du navigateur (`xhr.upload.onprogress`).
+- À chaque paquet de données transféré sur le réseau, Angular émet un événement `HttpEvent` dont le type est `HttpEventType.UploadProgress` (valeur numérique `1`).
+- Cet événement fournit deux propriétés :
+  - `event.loaded` : nombre d'octets déjà envoyés au serveur.
+  - `event.total` : taille totale du corps de requête en octets (fournie par l'en-tête `Content-Length`).
+- Le composant calcule simplement le pourcentage entier :
+  $$\text{pourcentage} = \text{Math.round}\left(\frac{100 \times \text{event.loaded}}{\text{event.total}}\right)$$
+
+### 4. Pourquoi les tests HTTP n’ont-ils pas besoin de MongoDB ?
+
+- Les tests unitaires du frontend testent le comportement **du client Angular en isolation**.
+- Grâce à `provideHttpClientTesting()` et `HttpTestingController`, Angular remplace le moteur réseau réel par un simulateur mémoire (mock).
+- `HttpTestingController.expectOne()` intercepte la requête émise par le code Angular avant qu'elle ne quitte le navigateur, vérifie la méthode (GET/POST/DELETE), l'URL et les en-têtes, puis renvoie immédiatement une réponse factice via `.flush(mockData)`.
+- Aucun serveur Express ni instance MongoDB n'est sollicité, ce qui rend les tests :
+  - **Déterministes :** Aucune dépendance aux données existantes en base.
+  - **Ultra-rapides :** Exécution de l'ensemble de la suite en moins d'une seconde.
+  - **Reproductibles :** Exécutables dans n'importe quel environnement d'intégration continue (CI) sans base de données provisionnée.
+
+### 5. Que vérifie un test d’intercepteur ou de guard ?
+
+- **Test d'intercepteur (`authInterceptor`) :** Vérifie que la chaîne de transmission HTTP modifie correctement les requêtes sortantes. Il teste spécifiquement qu'un clone de la requête est produit avec l'en-tête `Authorization: Bearer <token>` lorsque le token est présent dans le service d'authentification, et qu'aucune modification d'en-tête n'est opérée lorsque l'utilisateur est déconnecté. Il vérifie également l'interception des réponses 401 pour déconnecter automatiquement l'utilisateur.
+- **Test de guard (`authGuard`) :** Vérifie la politique de contrôle d'accès aux routes dans le routeur Angular. Il garantit que `authGuard()` renvoie `true` si un jeton valide existe, autorisant la navigation vers `/tracks` ou `/profile`, et renvoie un `UrlTree` pointant vers `/login` dans le cas contraire, interdisant tout accès aux pages privées.
+
+### 6. Quelle différence existe-t-il entre un test unitaire et un test d’intégration ?
+
+| Caractéristique        | Test unitaire                                                                                   | Test d’intégration                                                                                       |
+| ---------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Périmètre**          | Une seule fonction, classe, service ou composant isolé de son environnement.                    | L'interaction entre plusieurs modules, composants, services ou couches distinctes.                       |
+| **Dépendances**        | Toutes les dépendances externes sont remplacées par des doubles (mocks, stubs, fakes, spies).   | Utilise de vraies dépendances ou des sous-systèmes assemblés (ex: Router + Composant + Service).         |
+| **Exemple dans le TP** | `TrackService.list()` vérifiant que `page` et `limit` sont envoyés en bouchonnant `HttpClient`. | Tester la soumission du formulaire d'upload depuis le DOM jusqu'à l'affichage de la carte dans la liste. |
+| **Objectif**           | Valider la logique interne précise et les cas limites d'une unité de code.                      | Valider la bonne coopération et communication entre différentes parties de l'architecture.               |
+
+---
+
+## Ce que je sais expliquer sans l'agent (TP3)
+
+1. **Anti double-clic et UX asynchrone :** Pourquoi désactiver immédiatement les contrôles dès le déclenchement d'une opération asynchrone est crucial pour prévenir les requêtes concurrentes en double sur le serveur.
+2. **Notification non bloquante (SnackBar) :** Pourquoi remplacer les boîtes d'alerte synchrones bloquantes (`window.alert`) par un composant d'état réactif SnackBar améliore radicalement l'ergonomie et respecte le paradigme réactif Angular.
+3. **Flux `observe: 'events'` vs réponse unique :** Pourquoi un upload volumineux nécessite d'observer tous les événements HTTP plutôt que de simplement attendre la réponse finale.
+4. **Séparation unit tests frontend / backend :** Comment isoler complètement les tests de composants et d'intercepteurs avec `HttpTestingController` sans jamais instancier de backend réel.

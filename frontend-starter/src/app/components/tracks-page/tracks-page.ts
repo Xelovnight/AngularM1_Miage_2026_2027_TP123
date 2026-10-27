@@ -1,18 +1,20 @@
 import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { Track } from '../../shared/models/track.model';
 import { TrackService } from '../../shared/services/track.service';
+import { SnackbarService } from '../../shared/services/snackbar.service';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 Mo
+// Même liste que le fileFilter Multer du backend (backend/src/app.js) :
+// le navigateur envoie `file.type` comme Content-Type de la partie multipart.
 const ALLOWED_MIME_TYPES = new Set([
   'audio/mpeg',
-  'audio/mp3',
   'audio/wav',
   'audio/x-wav',
   'audio/ogg',
   'audio/mp4',
   'audio/x-m4a',
-  'audio/m4a',
 ]);
 
 @Component({
@@ -22,6 +24,7 @@ const ALLOWED_MIME_TYPES = new Set([
 })
 export class TracksPageComponent implements OnDestroy {
   private readonly service = inject(TrackService);
+  private readonly snackbar = inject(SnackbarService);
 
   // État réactif de la bibliothèque (Mission 2)
   readonly tracks = signal<Track[]>([]);
@@ -31,7 +34,12 @@ export class TracksPageComponent implements OnDestroy {
   readonly loading = signal(false);
   readonly error = signal('');
 
-  // État réactif de l'upload (Mission 3)
+  // État réactif de suppression (Mission 5)
+  readonly deletingId = signal<string | null>(null);
+
+  // État réactif de l'upload et de sa progression (Missions 3 & 6)
+  readonly uploadState = signal<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  readonly uploadProgress = signal<number | null>(null);
   readonly uploading = signal(false);
   readonly uploadSuccess = signal('');
   readonly uploadError = signal('');
@@ -74,11 +82,11 @@ export class TracksPageComponent implements OnDestroy {
       return;
     }
 
-    // 1. Contrôle du type audio
-    const isExtensionValid = /\.(mp3|wav|ogg|m4a)$/i.test(selected.name);
-    const isMimeValid = ALLOWED_MIME_TYPES.has(selected.type) || selected.type.startsWith('audio/');
-    if (!isMimeValid && !isExtensionValid) {
-      this.fileError.set('Format non supporté. Formats acceptés : MP3, WAV, OGG, M4A.');
+    // 1. Contrôle du type MIME, identique à celui du backend
+    if (!ALLOWED_MIME_TYPES.has(selected.type)) {
+      this.fileError.set(
+        `Format non supporté (${selected.type || 'type inconnu'}). Formats acceptés : MP3, WAV, OGG, M4A.`,
+      );
       this.file = undefined;
       input.value = '';
       return;
@@ -135,32 +143,55 @@ export class TracksPageComponent implements OnDestroy {
     this.load();
   }
 
-  /** Upload multipart avec FormData */
+  /** Upload multipart avec FormData et suivi de progression en temps réel (Mission 6) */
   upload(fileInput?: HTMLInputElement): void {
-    if (!this.file || this.uploading()) return;
+    if (!this.file || this.uploadState() === 'uploading') return;
 
     const trackTitle = this.title.value.trim() || this.file.name;
+    this.uploadState.set('uploading');
     this.uploading.set(true);
+    this.uploadProgress.set(0);
     this.uploadError.set('');
     this.uploadSuccess.set('');
+    this.title.disable();
 
     this.service.upload(this.file, trackTitle).subscribe({
-      next: (track) => {
-        console.debug('[TracksPage] Piste envoyée :', track.id);
-        this.uploadSuccess.set(`Morceau « ${track.title} » importé avec succès !`);
-        this.uploading.set(false);
-        this.title.reset('');
-        this.file = undefined;
-        if (fileInput) fileInput.value = '';
+      next: (event) => {
+        if (event.type === HttpEventType.UploadProgress && event.total) {
+          const percent = Math.round((100 * event.loaded) / event.total);
+          this.uploadProgress.set(percent);
+          console.debug('[TracksPage] Progression upload :', percent, '%');
+        } else if (event.type === HttpEventType.Response) {
+          const track = event.body!;
+          console.debug('[TracksPage] Piste envoyée avec succès :', track.id);
+          this.uploadProgress.set(100);
+          this.uploadState.set('success');
+          this.uploading.set(false);
+          this.title.enable();
 
-        // Revenir en page 1 et recharger la liste pour voir le nouveau morceau
-        this.page.set(1);
-        this.load();
+          const message = `Morceau « ${track.title} » importé avec succès !`;
+          this.uploadSuccess.set(message);
+          this.snackbar.showSuccess(message);
+
+          this.title.reset('');
+          this.file = undefined;
+          if (fileInput) fileInput.value = '';
+
+          // Revenir en page 1 et recharger la bibliothèque pour afficher le nouveau morceau
+          this.page.set(1);
+          this.load();
+        }
       },
-      error: (err: { error?: { message?: string } }) => {
+      error: (err: HttpErrorResponse | { status?: number; error?: { message?: string } }) => {
         console.error('[TracksPage] Envoi impossible', err);
-        this.uploadError.set(err.error?.message ?? "Erreur lors de l'envoi du fichier.");
+        this.uploadState.set('error');
         this.uploading.set(false);
+        this.uploadProgress.set(null);
+        this.title.enable();
+
+        const errorMsg = (err as any)?.error?.message ?? "Erreur lors de l'envoi du fichier.";
+        this.uploadError.set(errorMsg);
+        this.snackbar.showError(errorMsg);
       },
     });
   }
@@ -185,22 +216,61 @@ export class TracksPageComponent implements OnDestroy {
         this.audioUrl.set(newUrl);
         this.audioLoading.set(false);
       },
-      error: (err: { error?: { message?: string } }) => {
-        console.error('[TracksPage] Lecture impossible', err);
-        this.audioError.set(err.error?.message ?? 'Impossible de lire ce morceau.');
+      error: (err: HttpErrorResponse) => {
+        console.error('[TracksPage] Lecture impossible', err.status);
         this.audioLoading.set(false);
+        void this.describeAudioError(err).then((message) => this.audioError.set(message));
       },
     });
   }
 
-  /** Suppression avec confirmation utilisateur */
+  /** Erreur du lecteur <audio> lui-même (fichier corrompu, format non décodable…) */
+  onAudioError(): void {
+    this.audioError.set(
+      'Le navigateur ne parvient pas à décoder ce fichier audio (fichier corrompu ou format non pris en charge).',
+    );
+  }
+
+  /**
+   * Avec responseType: 'blob', le corps d'erreur JSON du backend arrive lui aussi sous forme
+   * de Blob : il faut le lire pour récupérer `message`, sinon on retombe sur un message selon le statut.
+   */
+  private async describeAudioError(err: HttpErrorResponse): Promise<string> {
+    if (err.error instanceof Blob) {
+      try {
+        const body = JSON.parse(await err.error.text()) as { message?: string };
+        if (body.message && err.status !== 404) return body.message;
+      } catch {
+        // Corps non JSON : on utilise le message par défaut ci-dessous
+      }
+    }
+    switch (err.status) {
+      case 0:
+        return 'Serveur injoignable : vérifiez que le backend est lancé.';
+      case 401:
+        return 'Session expirée : reconnectez-vous pour écouter ce morceau.';
+      case 404:
+        return "Ce morceau n'existe plus ou ne vous appartient pas.";
+      default:
+        return 'Impossible de lire ce morceau.';
+    }
+  }
+
+  /** Suppression avec confirmation utilisateur, protection anti double-clic et SnackBar (Mission 5) */
   deleteTrack(track: Track): void {
+    if (this.deletingId()) return; // Empêcher les clics multiples simultanés
+
     const confirmed = window.confirm(`Voulez-vous vraiment supprimer « ${track.title} » ?`);
     if (!confirmed) return;
+
+    this.deletingId.set(track.id);
 
     this.service.delete(track.id).subscribe({
       next: () => {
         console.debug('[TracksPage] Piste supprimée :', track.id);
+        this.deletingId.set(null);
+        this.snackbar.showSuccess(`Morceau « ${track.title} » supprimé avec succès.`);
+
         // Si la piste supprimée était en cours de lecture, couper la lecture
         if (this.currentTrack()?.id === track.id) {
           const previousUrl = this.audioUrl();
@@ -208,12 +278,30 @@ export class TracksPageComponent implements OnDestroy {
           this.audioUrl.set('');
           this.currentTrack.set(null);
         }
-        // Rafraîchir la page actuelle
+
+        // Si la seule piste d'une page > 1 est supprimée, revenir à la page précédente
+        if (this.tracks().length === 1 && this.page() > 1) {
+          this.page.set(this.page() - 1);
+        }
+
+        // Rafraîchir la bibliothèque depuis le backend
         this.load();
       },
-      error: (err: { error?: { message?: string } }) => {
+      error: (err: HttpErrorResponse | { status?: number; error?: { message?: string } }) => {
         console.error('[TracksPage] Suppression impossible', err);
-        alert(err.error?.message ?? 'Erreur lors de la suppression.');
+        this.deletingId.set(null);
+
+        // Le backend filtre par propriétaire (findOneAndDelete({ _id, ownerId })) : une piste
+        // supprimée entre-temps et une piste d'un autre utilisateur renvoient toutes deux 404.
+        if ((err as any)?.status === 404) {
+          this.snackbar.showError(
+            "Cette piste n'existe plus (déjà supprimée, par exemple dans un autre onglet) ou ne vous appartient pas.",
+          );
+          // Piste obsolète à l'écran : recharger la bibliothèque pour synchroniser l'affichage
+          this.load();
+        } else {
+          this.snackbar.showError((err as any)?.error?.message ?? 'Erreur lors de la suppression.');
+        }
       },
     });
   }

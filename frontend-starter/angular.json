@@ -20,6 +20,13 @@
                         "styles": [
                             "src/styles.css"
                         ]
+                    },
+                    "configurations": {
+                        "development": {
+                            "optimization": false,
+                            "extractLicenses": false,
+                            "sourceMap": true
+                        }
                     }
                 },
                 "serve": {
@@ -32,7 +39,10 @@
                     "defaultConfiguration": "development"
                 },
                 "test": {
-                    "builder": "@angular/build:unit-test"
+                    "builder": "@angular/build:unit-test",
+                    "options": {
+                        "watch": false
+                    }
                 }
             }
         }

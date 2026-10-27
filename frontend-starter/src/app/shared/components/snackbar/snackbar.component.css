@@ -1,0 +1,87 @@
+.snackbar-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 420px;
+  width: calc(100vw - 3rem);
+  pointer-events: none;
+}
+
+.snackbar-item {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.15rem;
+  border-radius: 8px;
+  font-size: 0.925rem;
+  line-height: 1.4;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.25s ease-out;
+  backdrop-filter: blur(8px);
+  color: #fff;
+  border: 1px solid transparent;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.snackbar-success {
+  background: linear-gradient(135deg, rgba(20, 83, 45, 0.95), rgba(22, 101, 52, 0.95));
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #f0fdf4;
+}
+
+.snackbar-error {
+  background: linear-gradient(135deg, rgba(127, 29, 29, 0.95), rgba(153, 27, 27, 0.95));
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fef2f2;
+}
+
+.snackbar-info {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.95), rgba(30, 64, 175, 0.95));
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #eff6ff;
+}
+
+.snackbar-icon {
+  font-weight: bold;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+}
+
+.snackbar-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+.snackbar-close {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 0 0.25rem;
+  line-height: 1;
+  transition: opacity 0.15s ease;
+}
+
+.snackbar-close:hover {
+  opacity: 1;
+}

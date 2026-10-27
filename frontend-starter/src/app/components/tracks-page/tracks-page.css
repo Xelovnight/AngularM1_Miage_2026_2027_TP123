@@ -200,10 +200,47 @@
   transition: all 0.2s ease;
 }
 
-.btn-delete:hover {
+.btn-delete:hover:not(:disabled) {
   background: #fdf2f2;
   color: #b33939;
   border-color: #b33939;
+}
+
+.btn-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #eee;
+  color: #999;
+}
+
+/* Barre de progression de l'upload (Mission 6) */
+.progress-container {
+  margin: 0.8rem 0 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.progress-bar-wrap {
+  width: 100%;
+  height: 8px;
+  background: #e1ebe7;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1d755e, #34d399);
+  transition: width 0.2s ease-in-out;
+  border-radius: 4px;
+}
+
+.progress-label {
+  font-size: 0.8rem;
+  color: #1d755e;
+  font-weight: 600;
+  text-align: right;
 }
 
 /* État vide & chargement */

@@ -17,11 +17,20 @@
 
       <label>
         Fichier audio (MP3, WAV, OGG, M4A — max 25 Mo)
-        <input #fileInput type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" (change)="choose($event)" />
+        <input #fileInput type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" (change)="choose($event)" [disabled]="uploading()" />
       </label>
 
       @if (fileError()) {
         <p class="field-error">{{ fileError() }}</p>
+      }
+
+      @if (uploadState() === 'uploading' && uploadProgress() !== null) {
+        <div class="progress-container">
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" [style.width.%]="uploadProgress()"></div>
+          </div>
+          <span class="progress-label">{{ uploadProgress() }}% envoyé</span>
+        </div>
       }
 
       @if (uploadError()) {
@@ -39,7 +48,7 @@
         class="btn-upload"
       >
         @if (uploading()) {
-          Envoi en cours…
+          Envoi en cours ({{ uploadProgress() ?? 0 }}%)…
         } @else {
           Envoyer le morceau
         }
@@ -75,7 +84,7 @@
           }
 
           @if (audioUrl()) {
-            <audio [src]="audioUrl()" controls autoplay class="audio-element"></audio>
+            <audio [src]="audioUrl()" controls autoplay class="audio-element" (error)="onAudioError()"></audio>
           }
         </div>
       }
@@ -128,10 +137,15 @@
                   type="button"
                   class="btn-delete"
                   (click)="deleteTrack(track)"
+                  [disabled]="deletingId() !== null"
                   [attr.aria-label]="'Supprimer ' + track.title"
-                  title="Supprimer définitivement"
+                  [title]="deletingId() === track.id ? 'Suppression en cours…' : 'Supprimer définitivement'"
                 >
-                  🗑
+                  @if (deletingId() === track.id) {
+                    ⏳ Suppr…
+                  } @else {
+                    🗑
+                  }
                 </button>
               </div>
             </div>

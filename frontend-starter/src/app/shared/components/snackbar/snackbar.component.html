@@ -1,0 +1,34 @@
+<div class="snackbar-container" aria-live="polite" aria-atomic="true">
+  @for (message of snackbarService.messages(); track message.id) {
+    <div
+      class="snackbar-item"
+      [class.snackbar-success]="message.type === 'success'"
+      [class.snackbar-error]="message.type === 'error'"
+      [class.snackbar-info]="message.type === 'info'"
+      role="alert"
+    >
+      <span class="snackbar-icon">
+        @switch (message.type) {
+          @case ('success') {
+            ✓
+          }
+          @case ('error') {
+            ✕
+          }
+          @default {
+            ℹ
+          }
+        }
+      </span>
+      <span class="snackbar-text">{{ message.text }}</span>
+      <button
+        type="button"
+        class="snackbar-close"
+        (click)="dismiss(message.id)"
+        aria-label="Fermer la notification"
+      >
+        ✕
+      </button>
+    </div>
+  }
+</div>
