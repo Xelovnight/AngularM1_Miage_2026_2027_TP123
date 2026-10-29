@@ -4,9 +4,18 @@
     <small>Le cloud qui manque à votre ampli</small>
   </div>
   <nav aria-label="Navigation principale">
-    <a routerLink="/tracks">Backing tracks</a>
+    <a routerLink="/tracks" routerLinkActive="active">Ma bibliothèque</a>
+    <a routerLink="/explore" routerLinkActive="active">Explorer</a>
     @if (auth.token()) {
-      <a routerLink="/profile">
+      <a routerLink="/shared" routerLinkActive="active">Partagés avec moi</a>
+      <a routerLink="/friends" routerLinkActive="active">
+        Amis
+        @if (friends.incomingCount(); as count) {
+          <span class="nav-badge" [attr.aria-label]="count + ' invitation(s) en attente'">{{ count }}</span>
+        }
+      </a>
+      <a routerLink="/activity" routerLinkActive="active">Activité</a>
+      <a routerLink="/profile" routerLinkActive="active">
         Profil@if (auth.currentUser(); as user) { ({{ user.name }})}
       </a>
       <button type="button" class="btn-logout" (click)="logout()">Déconnexion</button>

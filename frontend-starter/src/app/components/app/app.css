@@ -1,1 +1,16 @@
 :host { display: block; }
+
+nav a.active { font-weight: 700; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.nav-badge {
+  display: inline-block;
+  min-width: 1.2rem;
+  margin-left: 0.2rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: #e85d5d;
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2rem;
+  text-align: center;
+}

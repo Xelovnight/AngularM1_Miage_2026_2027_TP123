@@ -1,0 +1,64 @@
+<section>
+  <div class="hero">
+    <p class="eyebrow">PARTAGÉS AVEC MOI</p>
+    <h1>Les pistes de mes amis</h1>
+    <p>Retrouvez les backing tracks que vos amis vous ont partagées ou rendues visibles à leurs amis.</p>
+  </div>
+
+  <article class="card">
+    <div class="row header-row">
+      <div>
+        <h2>Pistes disponibles</h2>
+        <small class="total-badge">{{ total() }} piste{{ total() > 1 ? 's' : '' }}</small>
+      </div>
+      <button type="button" class="btn-refresh" (click)="load()" [disabled]="loading()">
+        ↻ Actualiser
+      </button>
+    </div>
+
+    @if (currentTrack(); as track) {
+      <app-audio-player [track]="track" />
+    }
+
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+
+    @if (loading()) {
+      <div class="loading-state">
+        <p>Chargement des pistes partagées…</p>
+      </div>
+    } @else {
+      <div class="tracks-list">
+        @for (track of tracks(); track track.id) {
+          <app-track-card
+            [track]="track"
+            [showOwner]="true"
+            [playing]="currentTrack()?.id === track.id"
+            (play)="play($event)"
+          />
+        } @empty {
+          <div class="empty-state">
+            <p>🤝 Aucune piste partagée avec vous pour l'instant.</p>
+            <small>
+              Ajoutez des guitaristes depuis la page <a routerLink="/friends">Amis</a> : leurs pistes
+              « Amis » et celles qu'ils vous partagent apparaîtront ici.
+            </small>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="pager">
+      <button type="button" (click)="go(page() - 1)" [disabled]="page() <= 1 || loading()">
+        ← Précédent
+      </button>
+      <span class="page-indicator">
+        Page <b>{{ page() }}</b> sur <b>{{ pages() }}</b>
+      </span>
+      <button type="button" (click)="go(page() + 1)" [disabled]="page() >= pages() || loading()">
+        Suivant →
+      </button>
+    </div>
+  </article>
+</section>

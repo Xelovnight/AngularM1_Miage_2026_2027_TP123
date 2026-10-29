@@ -1,0 +1,155 @@
+:host {
+  display: block;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+h2 {
+  margin: 0 0 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.count {
+  background: #b33939;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  min-width: 1.4rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  text-align: center;
+}
+
+.header-row {
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #e1ebe7;
+}
+
+.header-row h2 {
+  margin: 0;
+}
+
+.btn-refresh {
+  background: transparent;
+  color: #1d755e;
+  border: 1px solid #b8cbc5;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.muted {
+  color: #61756f;
+  font-size: 0.9rem;
+}
+
+.people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.people li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #e1ebe7;
+  border-radius: 10px;
+  background: white;
+}
+
+.people li.muted,
+.people li.empty-state {
+  border-style: dashed;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #123d32;
+  color: #62d6b3;
+  font-weight: 700;
+}
+
+.person-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: #17312a;
+  overflow-wrap: anywhere;
+}
+
+.person-name small {
+  display: block;
+  font-weight: 400;
+  color: #61756f;
+  font-size: 0.78rem;
+}
+
+.people button {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #1d755e;
+  border: 1px solid #b8cbc5;
+}
+
+.btn-remove {
+  background: transparent;
+  color: #8a3b3b;
+  border: 1px solid #ebd3d3;
+}
+
+.btn-remove:hover:not(:disabled) {
+  background: #fdf2f2;
+  border-color: #b33939;
+}
+
+.status-tag {
+  font-size: 0.78rem;
+  color: #61756f;
+  flex-shrink: 0;
+}
+
+.status-tag.friend {
+  color: #1d755e;
+  font-weight: 700;
+}
+
+.empty-state {
+  flex-direction: column;
+  text-align: center;
+  padding: 2rem 1rem !important;
+  color: #61756f;
+  background: #f9fbfb !important;
+}
+
+.empty-state p {
+  margin: 0 0 0.4rem;
+  font-weight: 600;
+  color: #17312a;
+}
+
+.grid {
+  grid-template-columns: 1fr 1fr;
+}

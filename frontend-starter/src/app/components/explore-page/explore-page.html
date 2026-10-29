@@ -1,0 +1,142 @@
+<section>
+  <div class="hero">
+    <p class="eyebrow">EXPLORER</p>
+    <h1>Trouver une backing track</h1>
+    <p>Cherchez par titre, tag, genre, tonalité, tempo ou auteur — ou parcourez les ajouts récents.</p>
+  </div>
+
+  <!-- Recherche : envoyée automatiquement après une pause de saisie -->
+  <form class="card search-card" [formGroup]="searchForm" (ngSubmit)="applySearch()" role="search">
+    <div class="search-main">
+      <input
+        class="search-input"
+        type="search"
+        formControlName="q"
+        placeholder="Ex : blues, shuffle, Alice…"
+        aria-label="Rechercher une piste"
+      />
+      <select formControlName="scope" aria-label="Périmètre de recherche">
+        @for (option of scopeOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+        }
+      </select>
+      <button
+        type="button"
+        class="btn-filters"
+        [class.active]="showFilters()"
+        (click)="showFilters.set(!showFilters())"
+        [attr.aria-expanded]="showFilters()"
+      >
+        ⚙ Filtres
+      </button>
+    </div>
+
+    @if (showFilters()) {
+      <div class="filters">
+        <label>
+          Genre
+          <input formControlName="genre" placeholder="Ex : Blues" />
+        </label>
+        <label>
+          Tonalité
+          <select formControlName="key">
+            <option [ngValue]="null">Toutes</option>
+            @for (key of musicalKeys; track key) {
+              <option [ngValue]="key">{{ key }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          BPM min
+          <input type="number" formControlName="bpmMin" min="20" max="300" placeholder="20" />
+        </label>
+        <label>
+          BPM max
+          <input type="number" formControlName="bpmMax" min="20" max="300" placeholder="300" />
+        </label>
+      </div>
+    }
+
+    @if (searchForm.controls.bpmMin.invalid || searchForm.controls.bpmMax.invalid) {
+      <p class="field-error">Le BPM doit être compris entre 20 et 300.</p>
+    } @else if (searchForm.hasError('bpmRange')) {
+      <p class="field-error">Le BPM minimum doit être inférieur ou égal au BPM maximum.</p>
+    }
+  </form>
+
+  <article class="card">
+    <div class="row header-row">
+      <div>
+        @if (searching()) {
+          <h2>Résultats de recherche</h2>
+          <small class="total-badge">{{ total() }} résultat{{ total() > 1 ? 's' : '' }}</small>
+        } @else {
+          <h2>Récemment ajoutés</h2>
+          <small class="total-badge">{{ total() }} piste{{ total() > 1 ? 's' : '' }} publique{{ total() > 1 ? 's' : '' }}</small>
+        }
+      </div>
+      <div class="header-actions">
+        @if (searching()) {
+          <button type="button" class="btn-refresh" (click)="resetSearch()">✕ Effacer la recherche</button>
+        }
+        <button type="button" class="btn-refresh" (click)="load()" [disabled]="loading()">
+          ↻ Actualiser
+        </button>
+      </div>
+    </div>
+
+    @if (currentTrack(); as track) {
+      <app-audio-player [track]="track" />
+    }
+
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+
+    @if (loading()) {
+      <div class="loading-state">
+        <p>{{ searching() ? 'Recherche en cours…' : 'Chargement des pistes publiques…' }}</p>
+      </div>
+    } @else {
+      <div class="tracks-list">
+        @for (track of tracks(); track track.id) {
+          <div class="explore-item" [class.mine]="isMine(track)">
+            @if (isMine(track)) {
+              <span class="mine-badge">Vous</span>
+            }
+            <app-track-card
+              [track]="track"
+              [showOwner]="true"
+              [clickableTags]="true"
+              [playing]="currentTrack()?.id === track.id"
+              (play)="play($event)"
+              (tagClick)="searchTag($event)"
+            />
+          </div>
+        } @empty {
+          <div class="empty-state">
+            @if (searching()) {
+              <p>🔎 Aucune piste ne correspond à votre recherche.</p>
+              <small>Essayez un autre mot-clé ou élargissez les filtres.</small>
+            } @else {
+              <p>🌐 Aucune piste publique pour l'instant.</p>
+              <small>Rendez une de vos pistes publique depuis votre bibliothèque pour la partager ici.</small>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <div class="pager">
+      <button type="button" (click)="go(page() - 1)" [disabled]="page() <= 1 || loading()">
+        ← Précédent
+      </button>
+      <span class="page-indicator">
+        Page <b>{{ page() }}</b> sur <b>{{ pages() }}</b>
+      </span>
+      <button type="button" (click)="go(page() + 1)" [disabled]="page() >= pages() || loading()">
+        Suivant →
+      </button>
+    </div>
+  </article>
+</section>

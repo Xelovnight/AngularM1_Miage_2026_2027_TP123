@@ -1,0 +1,66 @@
+:host {
+  display: block;
+}
+
+.header-row {
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #e1ebe7;
+}
+
+.header-row h2 {
+  margin: 0;
+}
+
+.total-badge {
+  color: #61756f;
+  font-size: 0.85rem;
+}
+
+.btn-refresh {
+  background: transparent;
+  color: #1d755e;
+  border: 1px solid #b8cbc5;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background: #eef5f2;
+}
+
+.tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.empty-state,
+.loading-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #61756f;
+  background: #f9fbfb;
+  border-radius: 10px;
+  border: 1px dashed #cce0d8;
+}
+
+.empty-state p {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #17312a;
+  margin: 0 0 0.5rem;
+}
+
+.pager {
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e1ebe7;
+}
+
+.page-indicator {
+  font-size: 0.9rem;
+}

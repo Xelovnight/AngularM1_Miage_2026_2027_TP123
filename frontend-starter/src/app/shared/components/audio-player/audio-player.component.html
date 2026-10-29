@@ -1,0 +1,31 @@
+<div class="player-container">
+  <div class="player-header">
+    <span class="playing-badge">EN COURS DE LECTURE</span>
+    <span class="playing-title">
+      <b>{{ track().title }}</b> ({{ formatFormat(track().mimeType, track().originalName) }})
+    </span>
+    @if (url()) {
+      <!-- Téléchargement du flux déjà reçu : mêmes droits que l'écoute, aucune requête de plus -->
+      <a
+        class="btn-download"
+        [href]="url()"
+        [attr.download]="track().originalName"
+        [attr.aria-label]="'Télécharger ' + track().title"
+      >
+        ⬇ Télécharger
+      </a>
+    }
+  </div>
+
+  @if (loading()) {
+    <p class="loading-text">Chargement du flux audio en mémoire…</p>
+  }
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (url()) {
+    <audio [src]="url()" controls autoplay class="audio-element" (error)="onAudioError()"></audio>
+  }
+</div>

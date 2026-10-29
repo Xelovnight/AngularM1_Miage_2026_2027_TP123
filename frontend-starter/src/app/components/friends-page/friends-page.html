@@ -1,0 +1,180 @@
+<section>
+  <div class="hero">
+    <p class="eyebrow">MON RÉSEAU</p>
+    <h1>Amis</h1>
+    <p>Invitez d'autres guitaristes pour partager vos backing tracks réservées aux amis.</p>
+  </div>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  <div class="grid">
+    <!-- Colonne gauche : recherche et invitations -->
+    <div class="column">
+      <article class="card">
+        <h2>Ajouter un ami</h2>
+        <label>
+          Nom ou email exact
+          <input
+            type="search"
+            [formControl]="userQuery"
+            placeholder="Ex : Alice, bob@example.com"
+            aria-label="Rechercher un utilisateur"
+          />
+        </label>
+
+        @if (searchError()) {
+          <p class="field-error">{{ searchError() }}</p>
+        }
+
+        @if (searching()) {
+          <p class="muted">Recherche…</p>
+        } @else if (searchedFor()) {
+          <ul class="people">
+            @for (user of results(); track user.id) {
+              <li>
+                <span class="avatar" aria-hidden="true">{{ user.name.charAt(0).toUpperCase() }}</span>
+                <span class="person-name">{{ user.name }}</span>
+                @switch (relation(user)) {
+                  @case ('friend') {
+                    <span class="status-tag friend">✓ Ami</span>
+                  }
+                  @case ('outgoing') {
+                    <span class="status-tag">Invitation envoyée</span>
+                  }
+                  @case ('incoming') {
+                    <button type="button" (click)="acceptFrom(user)" [disabled]="busyId() !== null">
+                      Accepter
+                    </button>
+                  }
+                  @default {
+                    <button
+                      type="button"
+                      (click)="invite(user)"
+                      [disabled]="busyId() !== null"
+                      [attr.aria-label]="'Inviter ' + user.name"
+                    >
+                      + Inviter
+                    </button>
+                  }
+                }
+              </li>
+            } @empty {
+              <li class="muted">Aucun utilisateur trouvé pour « {{ searchedFor() }} ».</li>
+            }
+          </ul>
+        } @else {
+          <p class="muted">Saisissez au moins 2 caractères.</p>
+        }
+      </article>
+
+      <article class="card">
+        <h2>
+          Invitations reçues
+          @if (overview().incoming.length) {
+            <span class="count">{{ overview().incoming.length }}</span>
+          }
+        </h2>
+        <ul class="people">
+          @for (request of overview().incoming; track request.friendshipId) {
+            <li>
+              <span class="avatar" aria-hidden="true">{{ request.user.name.charAt(0).toUpperCase() }}</span>
+              <span class="person-name">
+                {{ request.user.name }}
+                @if (request.createdAt) {
+                  <small>le {{ formatDate(request.createdAt) }}</small>
+                }
+              </span>
+              <button
+                type="button"
+                (click)="accept(request)"
+                [disabled]="busyId() !== null"
+                [attr.aria-label]="'Accepter l’invitation de ' + request.user.name"
+              >
+                Accepter
+              </button>
+              <button
+                type="button"
+                class="btn-secondary"
+                (click)="decline(request)"
+                [disabled]="busyId() !== null"
+                [attr.aria-label]="'Refuser l’invitation de ' + request.user.name"
+              >
+                Refuser
+              </button>
+            </li>
+          } @empty {
+            <li class="muted">Aucune invitation en attente.</li>
+          }
+        </ul>
+      </article>
+
+      @if (overview().outgoing.length) {
+        <article class="card">
+          <h2>Invitations envoyées</h2>
+          <ul class="people">
+            @for (request of overview().outgoing; track request.friendshipId) {
+              <li>
+                <span class="avatar" aria-hidden="true">{{ request.user.name.charAt(0).toUpperCase() }}</span>
+                <span class="person-name">
+                  {{ request.user.name }}
+                  <small>en attente</small>
+                </span>
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  (click)="cancel(request)"
+                  [disabled]="busyId() !== null"
+                  [attr.aria-label]="'Annuler l’invitation à ' + request.user.name"
+                >
+                  Annuler
+                </button>
+              </li>
+            }
+          </ul>
+        </article>
+      }
+    </div>
+
+    <!-- Colonne droite : amis confirmés -->
+    <article class="card">
+      <div class="row header-row">
+        <h2>Mes amis</h2>
+        <button type="button" class="btn-refresh" (click)="load()" [disabled]="loading()">↻ Actualiser</button>
+      </div>
+
+      @if (loading() && !overview().friends.length) {
+        <p class="muted">Chargement…</p>
+      } @else {
+        <ul class="people friends">
+          @for (friend of overview().friends; track friend.friendshipId) {
+            <li>
+              <span class="avatar" aria-hidden="true">{{ friend.user.name.charAt(0).toUpperCase() }}</span>
+              <span class="person-name">
+                {{ friend.user.name }}
+                @if (friend.since) {
+                  <small>amis depuis le {{ formatDate(friend.since) }}</small>
+                }
+              </span>
+              <button
+                type="button"
+                class="btn-remove"
+                (click)="removeFriend(friend)"
+                [disabled]="busyId() !== null"
+                [attr.aria-label]="'Retirer ' + friend.user.name + ' de vos amis'"
+              >
+                Retirer
+              </button>
+            </li>
+          } @empty {
+            <li class="empty-state">
+              <p>👥 Vous n'avez pas encore d'amis.</p>
+              <small>Recherchez un utilisateur à gauche pour lui envoyer une invitation.</small>
+            </li>
+          }
+        </ul>
+      }
+    </article>
+  </div>
+</section>

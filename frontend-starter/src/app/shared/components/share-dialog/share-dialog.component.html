@@ -1,0 +1,42 @@
+<div class="share-backdrop" (click)="cancel.emit()"></div>
+<div class="share-dialog" role="dialog" aria-modal="true" aria-labelledby="share-title">
+  <h3 id="share-title">🔗 Partager « {{ track().title }} »</h3>
+  <p class="share-hint">
+    Les amis cochés pourront écouter cette piste même si elle reste privée.
+  </p>
+
+  @if (friends().length) {
+    <ul class="share-friends">
+      @for (friend of friends(); track friend.id) {
+        <li>
+          <label>
+            <input
+              type="checkbox"
+              [checked]="isSelected(friend.id)"
+              (change)="toggle(friend.id)"
+              [disabled]="busy()"
+            />
+            {{ friend.name }}
+          </label>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="share-empty">
+      Vous n'avez pas encore d'ami. Invitez des guitaristes depuis la page Amis pour partager vos pistes.
+    </p>
+  }
+
+  <div class="share-actions">
+    <button type="button" class="btn-secondary" (click)="cancel.emit()" [disabled]="busy()">
+      Annuler
+    </button>
+    <button type="button" (click)="submit()" [disabled]="busy() || !changed()">
+      @if (busy()) {
+        Enregistrement…
+      } @else {
+        Enregistrer
+      }
+    </button>
+  </div>
+</div>

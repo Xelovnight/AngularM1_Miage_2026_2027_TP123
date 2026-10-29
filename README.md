@@ -4,7 +4,8 @@ Portail web pour stocker et écouter ses backing tracks de guitare : comptes
 utilisateurs, profil, bibliothèque audio paginée, upload avec progression,
 lecture sécurisée et suppression.
 
-Projet réalisé dans le cadre des TP1, TP2 et TP3 d'Angular — M1 MIAGE 2026-2027.
+Projet réalisé dans le cadre des TP1, TP2 et TP3 d'Angular — M1 MIAGE 2026-2027,
+puis étendu en mini-projet à partir du TP4 (voir [REPORT.md](REPORT.md)).
 
 **Auteur :** JUNGERS Enzo (travail individuel)
 
@@ -34,6 +35,36 @@ Projet réalisé dans le cadre des TP1, TP2 et TP3 d'Angular — M1 MIAGE 2026-2
 - Barre de progression de l'upload via les événements HTTP (`reportProgress`, `observe: 'events'`).
 - 13 tests frontend (Vitest) et 7 tests backend (`node:test`), sans dépendance à MongoDB.
 
+### TP4 — Mini-projet (étape 1)
+- Visibilité des pistes : privée, amis ou publique, modifiable depuis la carte de la piste.
+- Métadonnées musicales : BPM, tonalité, genre et tags, à l'upload et en édition.
+- Page **Explorer** : pistes publiques récemment ajoutées, avec leur auteur.
+- Contrôle d'accès à l'audio selon la visibilité ; backend découpé en routers et règles métier pures.
+
+### TP4 — Mini-projet (étape 2)
+- Recherche dans l'Explorer : texte libre (titre, tags, genre, auteur), périmètre, genre, tonalité et intervalle de BPM.
+- Lancement automatique après une pause de saisie ; clic sur un tag = recherche de ce tag.
+- Seules les pistes que l'utilisateur a le droit d'écouter peuvent apparaître dans les résultats.
+
+### TP4 — Mini-projet (étape 3)
+- Page **Amis** : rechercher un utilisateur (nom ou email exact), l'inviter, accepter ou refuser une invitation, annuler une invitation envoyée, retirer un ami.
+- Nombre d'invitations reçues affiché dans la navigation.
+- Les pistes « Amis » deviennent réellement accessibles aux amis ; retirer un ami coupe cet accès.
+
+### TP4 — Mini-projet (étape 4)
+- Partager une piste privée avec certains amis (bouton 🔗), voir ses destinataires et arrêter un partage (✕).
+- Page **Partagés avec moi** : pistes « Amis » de mes amis et pistes qu'ils m'ont partagées nommément.
+- Retirer un ami supprime les partages entre les deux personnes.
+
+### TP4 — Mini-projet (étape 5)
+- Page **Activité** : pistes publiées par mes amis, pistes qu'ils me partagent, invitations acceptées, du plus récent au plus ancien avec « Voir plus ».
+- Chaque événement est revérifié à l'affichage : une piste redevenue privée, supprimée ou un ancien ami disparaissent du fil.
+
+### TP4 — Mini-projet (étape 6, finitions)
+- Bouton **⬇ Télécharger** dans le lecteur (mêmes droits que l'écoute).
+- Nettoyage du typage des erreurs HTTP et vérification de toutes les pages sur ordinateur et mobile.
+- **106 tests frontend et 80 tests backend.** Rapport complet, bilan et résultats des tests : [REPORT.md](REPORT.md).
+
 ---
 
 ## Stack technique
@@ -60,22 +91,29 @@ dans MongoDB.
 ├── backend/
 │   ├── src/
 │   │   ├── server.js          # connexion MongoDB et démarrage
-│   │   ├── app.js             # routes Express, auth JWT, Multer
-│   │   └── models/            # schémas Mongoose (User, Track)
-│   └── test/api.test.js       # tests de santé, de contrat et de sécurité
+│   │   ├── app.js             # middlewares globaux, montage des routers
+│   │   ├── routes/            # auth, users, tracks, friends, activity
+│   │   ├── services/          # requêtes réutilisées (amis, partages, événements d'activité)
+│   │   ├── middlewares/       # JWT, Multer
+│   │   ├── rules/             # règles métier pures (accès, validation)
+│   │   └── models/            # schémas Mongoose (User, Track, Friendship, Activity)
+│   ├── test/                  # tests HTTP et tests des règles métier
+│   └── test-support/          # outils des tests (évaluateur de filtres MongoDB)
 ├── frontend-starter/
 │   ├── proxy.conf.json        # redirige /api vers le backend
 │   ├── fichiers-audio-de-test/
 │   └── src/app/
-│       ├── components/        # app, login, register, profile, tracks
+│       ├── components/        # app, login, register, profile, tracks, explore, friends, shared, activity
 │       ├── shared/
-│       │   ├── services/      # AuthService, TrackService, SnackbarService
+│       │   ├── services/      # AuthService, TrackService, FriendService, ActivityService, SnackbarService
 │       │   ├── guards/        # authGuard
 │       │   ├── interceptors/  # authInterceptor
-│       │   ├── components/    # SnackBar
-│       │   └── models/        # User, Track, Page, AuthResponse
+│       │   ├── components/    # SnackBar, TrackCard, AudioPlayer, ShareDialog
+│       │   ├── utils/         # formatage et conversion des métadonnées
+│       │   └── models/        # User, Track, Friend, Activity, Page, AuthResponse
 │       └── routes.ts
 ├── API_CONTRACT.md
+├── REPORT.md
 └── RAPPORT_IA_MODELE.md
 ```
 
@@ -155,14 +193,24 @@ Les tests frontend simulent les réponses HTTP (`HttpTestingController` ou
 services mockés) : ils vérifient URL, méthodes, paramètres, headers et états
 de l'interface sans backend ni base de données.
 
+Les tests backend vérifient les règles métier (fonctions pures de
+`backend/src/rules/`) sans MongoDB, ainsi que les réponses HTTP qui précèdent
+tout accès à la base.
+
 | Fichier de test | Ce qui est vérifié |
 |---|---|
-| `auth.service.spec.ts` | `login()` envoie `POST /api/auth/login` avec le bon corps ; `logout()` nettoie l'état |
-| `track.service.spec.ts` | `list()` transmet `page` et `limit` |
-| `auth.interceptor.spec.ts` | ajout ou absence du header `Authorization` |
-| `auth.guard.spec.ts` | accès autorisé avec token, redirection vers `/login` sinon |
-| `tracks-page.spec.ts` | erreur HTTP affichée, suppression puis rechargement, progression et échec de l'upload |
-| `backend/test/api.test.js` | `401` sans JWT ou avec JWT invalide, `400` sans fichier ou avec un type MIME refusé |
+| `auth.service.spec.ts`, `auth.interceptor.spec.ts`, `auth.guard.spec.ts` | connexion, header `Authorization`, protection des routes |
+| `track.service.spec.ts`, `friend.service.spec.ts`, `activity.service.spec.ts` | URL, méthode, paramètres et corps de chaque appel HTTP |
+| `tracks-page.spec.ts` | upload, modification, partage, suppression, erreurs et double clic |
+| `explore-page.spec.ts` | récemment ajoutés, recherche avec délai de saisie et filtres |
+| `friends-page.spec.ts` | recherche d'utilisateurs, invitations, retrait d'un ami |
+| `shared-page.spec.ts`, `activity-page.spec.ts` | listes paginées, « Voir plus », erreurs |
+| `track-card`, `share-dialog`, `audio-player` (`*.component.spec.ts`) | affichage et événements des composants partagés, téléchargement |
+| `track-format`, `friend-relation`, `activity-format` (`*.spec.ts`) | fonctions de formatage pures |
+| `backend/test/api.test.js` | `401`, `400` et `404` de toutes les routes, upload refusé sans fichier orphelin |
+| `backend/test/*-rules.test.js` | accès aux pistes, recherche, amis, partage, fil d'activité |
+
+Détail par fichier et résultats : section 8 de [REPORT.md](REPORT.md).
 
 ---
 
@@ -177,8 +225,21 @@ Toutes les routes sont préfixées par `/api`. Détails complets dans [API_CONTR
 | POST | `/auth/login` | — | `200 { token, user }` |
 | GET | `/users/me` | JWT | `200 User` |
 | PUT | `/users/me` | JWT | `200 User` |
+| GET | `/users/search?q=…` | JWT | `200 PublicUser[]` |
+| GET | `/friends` | JWT | `200 FriendsOverview` |
+| POST | `/friends/requests` (`{userId}`) | JWT | `201` / `200 {friendshipId,status}` |
+| POST | `/friends/requests/:id/accept` | JWT | `200 {friendshipId,status}` |
+| DELETE | `/friends/requests/:id` | JWT | `204` |
+| DELETE | `/friends/:userId` | JWT | `204` |
+| GET | `/activity?limit=10&before=…` | JWT | `200 { items, nextBefore }` |
 | GET | `/tracks?page=1&limit=5` | JWT | `Page<Track>` |
-| POST | `/tracks` (multipart `audio`, `title`) | JWT | `201 Track` |
+| GET | `/tracks/public?page=1&limit=10` | JWT | `Page<Track>` |
+| GET | `/tracks/search?q=…&scope=…&genre=…&key=…&bpmMin=…&bpmMax=…` | JWT | `Page<Track>` |
+| GET | `/tracks/shared-with-me?page=1&limit=10` | JWT | `Page<Track>` |
+| POST | `/tracks` (multipart `audio`, `title`, `visibility`, `bpm`, `key`, `genre`, `tags`) | JWT | `201 Track` |
+| PATCH | `/tracks/:id` (JSON métadonnées) | JWT | `200 Track` |
+| PUT | `/tracks/:id/shares` (`{userIds}`) | JWT | `200 Track` |
+| DELETE | `/tracks/:id/shares/:userId` | JWT | `200 Track` |
 | GET | `/tracks/:id/audio` | JWT | flux audio |
 | DELETE | `/tracks/:id` | JWT | `204` |
 
@@ -191,7 +252,8 @@ Formats audio acceptés : MP3, WAV, OGG, M4A — 25 Mo maximum.
 - Le fichier `backend/.env` (URI MongoDB, secret JWT) n'est jamais commité ni copié dans Angular.
 - Les mots de passe sont hachés avec `bcrypt` côté backend ; ni mot de passe ni JWT ne sont journalisés.
 - Le guard et l'interface Angular améliorent l'expérience, mais c'est le backend qui vérifie
-  réellement le JWT et le propriétaire de chaque piste (lecture et suppression).
+  réellement le JWT, le propriétaire de chaque piste (modification et suppression)
+  et le droit d'écoute selon la visibilité.
 
 ## Documents
 

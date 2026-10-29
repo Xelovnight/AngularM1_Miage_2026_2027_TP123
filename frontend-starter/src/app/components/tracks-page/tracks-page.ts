@@ -1,12 +1,29 @@
-import { Component, inject, OnDestroy, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, computed, inject, signal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
-import { Track } from '../../shared/models/track.model';
+import {
+  BPM_MAX,
+  BPM_MIN,
+  MUSICAL_KEYS,
+  Track,
+  TrackMetadata,
+  Visibility,
+  VISIBILITY_OPTIONS,
+} from '../../shared/models/track.model';
 import { TrackService } from '../../shared/services/track.service';
 import { SnackbarService } from '../../shared/services/snackbar.service';
+import { FriendService } from '../../shared/services/friend.service';
+import { PublicUser } from '../../shared/models/friend.model';
+import { ShareDialogComponent } from '../../shared/components/share-dialog/share-dialog.component';
+import { TrackCardComponent } from '../../shared/components/track-card/track-card.component';
+import { AudioPlayerComponent } from '../../shared/components/audio-player/audio-player.component';
+import { toTrackMetadata } from '../../shared/utils/track-format';
+
+/** Erreur HTTP telle que l'utilise la page : statut et message du backend. */
+type ApiError = Pick<HttpErrorResponse, 'status'> & { error?: { message?: string } | null };
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 Mo
-// Même liste que le fileFilter Multer du backend (backend/src/app.js) :
+// Même liste que le fileFilter Multer du backend (backend/src/middlewares/upload.js) :
 // le navigateur envoie `file.type` comme Content-Type de la partie multipart.
 const ALLOWED_MIME_TYPES = new Set([
   'audio/mpeg',
@@ -18,13 +35,14 @@ const ALLOWED_MIME_TYPES = new Set([
 ]);
 
 @Component({
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, TrackCardComponent, AudioPlayerComponent, ShareDialogComponent],
   templateUrl: './tracks-page.html',
   styleUrl: './tracks-page.css',
 })
-export class TracksPageComponent implements OnDestroy {
+export class TracksPageComponent {
   private readonly service = inject(TrackService);
   private readonly snackbar = inject(SnackbarService);
+  private readonly friendService = inject(FriendService);
 
   // État réactif de la bibliothèque (Mission 2)
   readonly tracks = signal<Track[]>([]);
@@ -37,6 +55,18 @@ export class TracksPageComponent implements OnDestroy {
   // État réactif de suppression (Mission 5)
   readonly deletingId = signal<string | null>(null);
 
+  // État réactif de modification des métadonnées (TP4)
+  readonly editingId = signal<string | null>(null);
+  readonly savingId = signal<string | null>(null);
+
+  // Partage nominatif (TP4) : piste dont la fenêtre de partage est ouverte
+  readonly sharingTrack = signal<Track | null>(null);
+  /** Amis confirmés, triés par nom par le backend. */
+  readonly friends = computed(() => this.friendService.overview().friends.map((f) => f.user));
+  private readonly friendNames = computed(
+    () => new Map(this.friends().map((friend) => [friend.id, friend.name])),
+  );
+
   // État réactif de l'upload et de sa progression (Missions 3 & 6)
   readonly uploadState = signal<'idle' | 'uploading' | 'success' | 'error'>('idle');
   readonly uploadProgress = signal<number | null>(null);
@@ -45,27 +75,32 @@ export class TracksPageComponent implements OnDestroy {
   readonly uploadError = signal('');
   readonly fileError = signal('');
 
-  // État réactif du lecteur audio (Mission 3)
+  // Piste affichée dans le lecteur audio partagé
   readonly currentTrack = signal<Track | null>(null);
-  readonly audioLoading = signal(false);
-  readonly audioError = signal('');
-  readonly audioUrl = signal('');
 
   // Formulaire d'envoi
   readonly title = new FormControl('', { nonNullable: true, validators: [Validators.required] });
+  readonly metadata = new FormGroup({
+    visibility: new FormControl<Visibility>('private', { nonNullable: true }),
+    bpm: new FormControl<number | null>(null, [
+      Validators.min(BPM_MIN),
+      Validators.max(BPM_MAX),
+    ]),
+    key: new FormControl<string | null>(null),
+    genre: new FormControl('', { nonNullable: true }),
+    tags: new FormControl('', { nonNullable: true }),
+  });
   file?: File;
+
+  readonly visibilityOptions = VISIBILITY_OPTIONS;
+  readonly musicalKeys = MUSICAL_KEYS;
 
   constructor() {
     this.load();
-  }
-
-  ngOnDestroy(): void {
-    // Révocation de l'ObjectURL pour éviter les fuites de mémoire (Memory Leak)
-    const currentUrl = this.audioUrl();
-    if (currentUrl) {
-      URL.revokeObjectURL(currentUrl);
-      console.debug('[TracksPage] ObjectURL révoquée à la destruction du composant');
-    }
+    // Noms des amis pour la fenêtre de partage et la ligne « Partagée avec »
+    this.friendService.refresh().subscribe({
+      error: (err) => console.error('[TracksPage] Amis indisponibles', err),
+    });
   }
 
   /** Sélection et validation préventive du fichier côté frontend */
@@ -145,17 +180,22 @@ export class TracksPageComponent implements OnDestroy {
 
   /** Upload multipart avec FormData et suivi de progression en temps réel (Mission 6) */
   upload(fileInput?: HTMLInputElement): void {
-    if (!this.file || this.uploadState() === 'uploading') return;
+    if (!this.file || this.uploadState() === 'uploading' || this.metadata.invalid) return;
 
     const trackTitle = this.title.value.trim() || this.file.name;
+    const metadata: TrackMetadata = {
+      ...toTrackMetadata(this.metadata.getRawValue()),
+      title: trackTitle,
+    };
     this.uploadState.set('uploading');
     this.uploading.set(true);
     this.uploadProgress.set(0);
     this.uploadError.set('');
     this.uploadSuccess.set('');
     this.title.disable();
+    this.metadata.disable();
 
-    this.service.upload(this.file, trackTitle).subscribe({
+    this.service.upload(this.file, metadata).subscribe({
       next: (event) => {
         if (event.type === HttpEventType.UploadProgress && event.total) {
           const percent = Math.round((100 * event.loaded) / event.total);
@@ -168,12 +208,14 @@ export class TracksPageComponent implements OnDestroy {
           this.uploadState.set('success');
           this.uploading.set(false);
           this.title.enable();
+          this.metadata.enable();
 
           const message = `Morceau « ${track.title} » importé avec succès !`;
           this.uploadSuccess.set(message);
           this.snackbar.showSuccess(message);
 
           this.title.reset('');
+          this.metadata.reset();
           this.file = undefined;
           if (fileInput) fileInput.value = '';
 
@@ -182,78 +224,122 @@ export class TracksPageComponent implements OnDestroy {
           this.load();
         }
       },
-      error: (err: HttpErrorResponse | { status?: number; error?: { message?: string } }) => {
+      error: (err: ApiError) => {
         console.error('[TracksPage] Envoi impossible', err);
         this.uploadState.set('error');
         this.uploading.set(false);
         this.uploadProgress.set(null);
         this.title.enable();
+        this.metadata.enable();
 
-        const errorMsg = (err as any)?.error?.message ?? "Erreur lors de l'envoi du fichier.";
+        const errorMsg = err.error?.message ?? "Erreur lors de l'envoi du fichier.";
         this.uploadError.set(errorMsg);
         this.snackbar.showError(errorMsg);
       },
     });
   }
 
-  /** Lecture audio sécurisée via Blob et ObjectURL */
+  /** Affiche la piste dans le lecteur partagé, qui charge lui-même le flux audio */
   play(track: Track): void {
-    this.audioError.set('');
-    this.audioLoading.set(true);
     this.currentTrack.set(track);
+  }
 
-    this.service.audio(track.id).subscribe({
-      next: (blob) => {
-        console.debug('[TracksPage] Audio reçu (Blob) :', blob.size, 'octets');
+  /**
+   * Modifie la visibilité ou les métadonnées d'une piste (PATCH).
+   * La piste renvoyée par le backend remplace celle affichée.
+   */
+  updateTrack(track: Track, changes: TrackMetadata): void {
+    if (this.savingId()) return;
+    this.savingId.set(track.id);
 
-        // Révoquer l'ancienne URL avant d'en créer une nouvelle
-        const previousUrl = this.audioUrl();
-        if (previousUrl) {
-          URL.revokeObjectURL(previousUrl);
-        }
+    this.service.update(track.id, changes).subscribe({
+      next: (updated) => {
+        console.debug('[TracksPage] Piste modifiée :', updated.id, Object.keys(changes));
+        this.savingId.set(null);
+        this.editingId.set(null);
+        this.tracks.update((list) => list.map((t) => (t.id === updated.id ? updated : t)));
+        if (this.currentTrack()?.id === updated.id) this.currentTrack.set(updated);
 
-        const newUrl = URL.createObjectURL(blob);
-        this.audioUrl.set(newUrl);
-        this.audioLoading.set(false);
+        this.snackbar.showSuccess(
+          changes.visibility && Object.keys(changes).length === 1
+            ? `« ${updated.title} » est maintenant ${this.visibilityLabel(updated.visibility)}.`
+            : `Morceau « ${updated.title} » mis à jour.`,
+        );
       },
-      error: (err: HttpErrorResponse) => {
-        console.error('[TracksPage] Lecture impossible', err.status);
-        this.audioLoading.set(false);
-        void this.describeAudioError(err).then((message) => this.audioError.set(message));
+      error: (err: ApiError) => {
+        console.error('[TracksPage] Modification impossible', err);
+        this.savingId.set(null);
+
+        if (err.status === 404) {
+          this.snackbar.showError("Cette piste n'existe plus ou ne vous appartient pas.");
+          this.editingId.set(null);
+          this.load();
+        } else {
+          this.snackbar.showError(err.error?.message ?? 'Erreur lors de la modification.');
+        }
       },
     });
   }
 
-  /** Erreur du lecteur <audio> lui-même (fichier corrompu, format non décodable…) */
-  onAudioError(): void {
-    this.audioError.set(
-      'Le navigateur ne parvient pas à décoder ce fichier audio (fichier corrompu ou format non pris en charge).',
+  /**
+   * Destinataires d'une piste avec leur nom. Un identifiant qui n'est plus
+   * un ami (amitié retirée dans un autre onglet) est affiché comme tel.
+   */
+  shareTargetsOf(track: Track): PublicUser[] {
+    const names = this.friendNames();
+    return (track.sharedWith ?? []).map((id) => ({ id, name: names.get(id) ?? 'Ancien ami' }));
+  }
+
+  /** Enregistre la liste complète des destinataires de la piste ouverte. */
+  saveShares(userIds: string[]): void {
+    const track = this.sharingTrack();
+    if (!track) return;
+    this.applyShareChange(track, () => this.service.setShares(track.id, userIds), (updated) => {
+      this.sharingTrack.set(null);
+      const count = updated.sharedWith?.length ?? 0;
+      return count
+        ? `« ${updated.title} » est partagée avec ${count} ami${count > 1 ? 's' : ''}.`
+        : `« ${updated.title} » n'est plus partagée.`;
+    });
+  }
+
+  /** Arrête le partage d'une piste avec un seul ami (bouton ✕ de la carte). */
+  unshare(track: Track, friend: PublicUser): void {
+    this.applyShareChange(
+      track,
+      () => this.service.unshare(track.id, friend.id),
+      (updated) => `« ${updated.title} » n'est plus partagée avec ${friend.name}.`,
     );
   }
 
-  /**
-   * Avec responseType: 'blob', le corps d'erreur JSON du backend arrive lui aussi sous forme
-   * de Blob : il faut le lire pour récupérer `message`, sinon on retombe sur un message selon le statut.
-   */
-  private async describeAudioError(err: HttpErrorResponse): Promise<string> {
-    if (err.error instanceof Blob) {
-      try {
-        const body = JSON.parse(await err.error.text()) as { message?: string };
-        if (body.message && err.status !== 404) return body.message;
-      } catch {
-        // Corps non JSON : on utilise le message par défaut ci-dessous
-      }
-    }
-    switch (err.status) {
-      case 0:
-        return 'Serveur injoignable : vérifiez que le backend est lancé.';
-      case 401:
-        return 'Session expirée : reconnectez-vous pour écouter ce morceau.';
-      case 404:
-        return "Ce morceau n'existe plus ou ne vous appartient pas.";
-      default:
-        return 'Impossible de lire ce morceau.';
-    }
+  private applyShareChange(
+    track: Track,
+    request: () => ReturnType<TrackService['setShares']>,
+    successMessage: (updated: Track) => string,
+  ): void {
+    if (this.savingId()) return;
+    this.savingId.set(track.id);
+
+    request().subscribe({
+      next: (updated) => {
+        console.debug('[TracksPage] Partages modifiés :', updated.id, updated.sharedWith);
+        this.savingId.set(null);
+        this.tracks.update((list) => list.map((t) => (t.id === updated.id ? updated : t)));
+        this.snackbar.showSuccess(successMessage(updated));
+      },
+      error: (err: ApiError) => {
+        console.error('[TracksPage] Partage impossible', err);
+        this.savingId.set(null);
+
+        if (err.status === 404) {
+          this.snackbar.showError("Cette piste ou ce partage n'existe plus.");
+          this.sharingTrack.set(null);
+          this.load();
+        } else {
+          this.snackbar.showError(err.error?.message ?? 'Erreur lors du partage.');
+        }
+      },
+    });
   }
 
   /** Suppression avec confirmation utilisateur, protection anti double-clic et SnackBar (Mission 5) */
@@ -271,11 +357,9 @@ export class TracksPageComponent implements OnDestroy {
         this.deletingId.set(null);
         this.snackbar.showSuccess(`Morceau « ${track.title} » supprimé avec succès.`);
 
-        // Si la piste supprimée était en cours de lecture, couper la lecture
+        // Si la piste supprimée était en cours de lecture, fermer le lecteur
+        // (sa destruction révoque l'ObjectURL)
         if (this.currentTrack()?.id === track.id) {
-          const previousUrl = this.audioUrl();
-          if (previousUrl) URL.revokeObjectURL(previousUrl);
-          this.audioUrl.set('');
           this.currentTrack.set(null);
         }
 
@@ -287,57 +371,33 @@ export class TracksPageComponent implements OnDestroy {
         // Rafraîchir la bibliothèque depuis le backend
         this.load();
       },
-      error: (err: HttpErrorResponse | { status?: number; error?: { message?: string } }) => {
+      error: (err: ApiError) => {
         console.error('[TracksPage] Suppression impossible', err);
         this.deletingId.set(null);
 
         // Le backend filtre par propriétaire (findOneAndDelete({ _id, ownerId })) : une piste
         // supprimée entre-temps et une piste d'un autre utilisateur renvoient toutes deux 404.
-        if ((err as any)?.status === 404) {
+        if (err.status === 404) {
           this.snackbar.showError(
             "Cette piste n'existe plus (déjà supprimée, par exemple dans un autre onglet) ou ne vous appartient pas.",
           );
           // Piste obsolète à l'écran : recharger la bibliothèque pour synchroniser l'affichage
           this.load();
         } else {
-          this.snackbar.showError((err as any)?.error?.message ?? 'Erreur lors de la suppression.');
+          this.snackbar.showError(err.error?.message ?? 'Erreur lors de la suppression.');
         }
       },
     });
   }
 
-  /** Formatage lisible de la taille en Ko ou Mo */
-  formatSize(bytes: number): string {
-    if (!bytes || bytes <= 0) return '0 Ko';
-    const mb = bytes / (1024 * 1024);
-    if (mb >= 1) {
-      return `${mb.toFixed(1)} Mo`;
+  private visibilityLabel(visibility: Visibility | undefined): string {
+    switch (visibility) {
+      case 'public':
+        return 'publique';
+      case 'friends':
+        return 'visible par vos amis';
+      default:
+        return 'privée';
     }
-    const kb = Math.round(bytes / 1024);
-    return `${kb} Ko`;
-  }
-
-  /** Formatage lisible de la date */
-  formatDate(dateStr: string): string {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      });
-    } catch {
-      return dateStr.slice(0, 10);
-    }
-  }
-
-  /** Extraction propre du format audio */
-  formatFormat(mimeType: string, filename: string): string {
-    if (mimeType.includes('mpeg') || filename.endsWith('.mp3')) return 'MP3';
-    if (mimeType.includes('wav')) return 'WAV';
-    if (mimeType.includes('ogg')) return 'OGG';
-    if (mimeType.includes('m4a') || mimeType.includes('mp4')) return 'M4A';
-    return mimeType.split('/')[1]?.toUpperCase() ?? 'AUDIO';
   }
 }

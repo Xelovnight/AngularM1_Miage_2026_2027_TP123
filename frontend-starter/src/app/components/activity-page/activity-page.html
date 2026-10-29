@@ -1,0 +1,76 @@
+<section>
+  <div class="hero">
+    <p class="eyebrow">ACTIVITÉ</p>
+    <h1>Quoi de neuf chez mes amis ?</h1>
+    <p>Les pistes publiées par vos amis, celles qu'ils vous partagent et vos nouvelles amitiés.</p>
+  </div>
+
+  <article class="card">
+    <div class="row header-row">
+      <h2>Fil d'activité</h2>
+      <button type="button" class="btn-refresh" (click)="load()" [disabled]="loading()">
+        ↻ Actualiser
+      </button>
+    </div>
+
+    @if (currentTrack(); as track) {
+      <app-audio-player [track]="track" />
+    }
+
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+
+    @if (loading()) {
+      <div class="loading-state">
+        <p>Chargement de l'activité…</p>
+      </div>
+    } @else {
+      <ol class="feed">
+        @for (activity of items(); track activity.id) {
+          <li class="feed-item" [attr.data-type]="activity.type">
+            <div class="feed-line">
+              <span class="feed-icon" aria-hidden="true">{{ icon(activity) }}</span>
+              <p class="feed-text">
+                <b>{{ activity.actor.name }}</b> {{ describe(activity) }}
+              </p>
+              <time class="feed-time" [attr.datetime]="activity.createdAt">
+                {{ relativeTime(activity.createdAt) }}
+              </time>
+            </div>
+
+            @if (activity.track; as track) {
+              <app-track-card
+                [track]="track"
+                [playing]="currentTrack()?.id === track.id"
+                (play)="play($event)"
+              />
+            }
+          </li>
+        } @empty {
+          <li class="empty-state">
+            @if (hasFriends()) {
+              <p>📭 Rien de nouveau pour l'instant.</p>
+              <small>Quand vos amis publieront ou partageront une piste, elle apparaîtra ici.</small>
+            } @else {
+              <p>🤝 Votre fil est vide.</p>
+              <small>
+                Ajoutez des guitaristes depuis la page <a routerLink="/friends">Amis</a> pour suivre leur activité.
+              </small>
+            }
+          </li>
+        }
+      </ol>
+
+      @if (nextBefore()) {
+        <div class="more">
+          <button type="button" class="btn-refresh" (click)="loadMore()" [disabled]="loadingMore()">
+            {{ loadingMore() ? 'Chargement…' : 'Voir plus' }}
+          </button>
+        </div>
+      } @else if (items().length) {
+        <p class="feed-end">Vous êtes à jour 🎶</p>
+      }
+    }
+  </article>
+</section>

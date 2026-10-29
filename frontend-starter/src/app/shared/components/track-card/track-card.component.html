@@ -1,0 +1,196 @@
+<div class="track-card" [class.is-playing]="playing()">
+  <div class="track-main">
+    <div class="track-info">
+      <div class="track-title-row">
+        <h3 class="track-title">{{ track().title }}</h3>
+        <span class="badge-format">{{ formatFormat(track().mimeType, track().originalName) }}</span>
+        @if (!owned()) {
+          <span class="badge-visibility" [attr.data-visibility]="track().visibility ?? 'private'">
+            {{ visibilityOption(track().visibility).icon }} {{ visibilityOption(track().visibility).label }}
+          </span>
+          @if (track().sharedWithMe) {
+            <span class="badge-shared">🔗 Partagée avec vous</span>
+          }
+        }
+      </div>
+
+      @if (showOwner() && track().ownerName) {
+        <span class="track-owner">par <b>{{ track().ownerName }}</b></span>
+      }
+
+      @if (track().bpm || track().key || track().genre || track().tags?.length) {
+        <div class="track-music">
+          @if (track().bpm) {
+            <span class="chip chip-bpm">♩ {{ track().bpm }} BPM</span>
+          }
+          @if (track().key) {
+            <span class="chip chip-key">🎼 {{ track().key }}</span>
+          }
+          @if (track().genre) {
+            <span class="chip chip-genre">{{ track().genre }}</span>
+          }
+          @for (tag of track().tags ?? []; track tag) {
+            @if (clickableTags()) {
+              <button
+                type="button"
+                class="chip chip-tag chip-button"
+                (click)="tagClick.emit(tag)"
+                [attr.aria-label]="'Rechercher le tag ' + tag"
+              >
+                #{{ tag }}
+              </button>
+            } @else {
+              <span class="chip chip-tag">#{{ tag }}</span>
+            }
+          }
+        </div>
+      }
+
+      <div class="track-meta">
+        <span class="track-file">📄 {{ track().originalName }}</span>
+        <span class="track-dot">·</span>
+        <span class="track-size">💾 {{ formatSize(track().size) }}</span>
+        <span class="track-dot">·</span>
+        <span class="track-date">📅 {{ formatDate(track().createdAt) }}</span>
+      </div>
+
+      @if (owned() && shareTargets().length) {
+        <div class="track-shares">
+          <span class="shares-label">🔗 Partagée avec :</span>
+          @for (friend of shareTargets(); track friend.id) {
+            <span class="share-chip">
+              {{ friend.name }}
+              <button
+                type="button"
+                class="share-remove"
+                (click)="unshare.emit(friend)"
+                [disabled]="busy()"
+                [attr.aria-label]="'Arrêter le partage avec ' + friend.name"
+                title="Arrêter le partage"
+              >
+                ✕
+              </button>
+            </span>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="track-actions">
+      @if (owned()) {
+        <select
+          class="visibility-select"
+          [attr.data-visibility]="track().visibility ?? 'private'"
+          (change)="changeVisibility($event)"
+          [disabled]="busy()"
+          [attr.aria-label]="'Visibilité de ' + track().title"
+        >
+          @for (option of visibilityOptions; track option.value) {
+            <option [value]="option.value" [selected]="option.value === (track().visibility ?? 'private')">
+              {{ option.icon }} {{ option.label }}
+            </option>
+          }
+        </select>
+      }
+
+      <button
+        type="button"
+        class="btn-play"
+        [class.active]="playing()"
+        (click)="play.emit(track())"
+        [attr.aria-label]="'Écouter ' + track().title"
+      >
+        @if (playing()) {
+          🔊 Écoute
+        } @else {
+          ▶ Écouter
+        }
+      </button>
+
+      @if (owned()) {
+        <!-- Le partage nominatif n'a de sens que pour une piste privée -->
+        @if ((track().visibility ?? 'private') === 'private') {
+          <button
+            type="button"
+            class="btn-edit btn-share"
+            (click)="share.emit(track())"
+            [disabled]="busy()"
+            [attr.aria-label]="'Partager ' + track().title"
+            title="Partager avec des amis"
+          >
+            🔗
+          </button>
+        }
+
+        <button
+          type="button"
+          class="btn-edit"
+          (click)="editing() ? editCancel.emit() : editStart.emit(track())"
+          [disabled]="busy()"
+          [attr.aria-label]="'Modifier ' + track().title"
+          title="Modifier les informations"
+        >
+          ✏️
+        </button>
+
+        <button
+          type="button"
+          class="btn-delete"
+          (click)="remove.emit(track())"
+          [disabled]="deleting()"
+          [attr.aria-label]="'Supprimer ' + track().title"
+          title="Supprimer définitivement"
+        >
+          🗑
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (owned() && editing()) {
+    <form class="edit-form" [formGroup]="form" (ngSubmit)="submit()">
+      <label class="field-title">
+        Titre
+        <input formControlName="title" />
+      </label>
+      <label>
+        BPM
+        <input type="number" formControlName="bpm" min="20" max="300" placeholder="Ex: 92" />
+      </label>
+      <label>
+        Tonalité
+        <select formControlName="key">
+          <option [ngValue]="null">—</option>
+          @for (key of musicalKeys; track key) {
+            <option [ngValue]="key">{{ key }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        Genre
+        <input formControlName="genre" placeholder="Ex: Blues" />
+      </label>
+      <label class="field-tags">
+        Tags (séparés par des virgules)
+        <input formControlName="tags" placeholder="Ex: shuffle, lent" />
+      </label>
+
+      @if (form.controls.bpm.invalid) {
+        <p class="field-error">Le BPM doit être compris entre 20 et 300.</p>
+      }
+
+      <div class="edit-actions">
+        <button type="button" class="btn-cancel" (click)="editCancel.emit()" [disabled]="busy()">
+          Annuler
+        </button>
+        <button type="submit" [disabled]="form.invalid || busy()">
+          @if (busy()) {
+            Enregistrement…
+          } @else {
+            Enregistrer
+          }
+        </button>
+      </div>
+    </form>
+  }
+</div>

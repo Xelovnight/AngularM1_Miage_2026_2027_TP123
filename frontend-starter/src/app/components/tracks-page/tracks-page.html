@@ -20,6 +20,47 @@
         <input #fileInput type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a" (change)="choose($event)" [disabled]="uploading()" />
       </label>
 
+      <fieldset class="metadata" [formGroup]="metadata">
+        <label>
+          Visibilité
+          <select formControlName="visibility">
+            @for (option of visibilityOptions; track option.value) {
+              <option [ngValue]="option.value">{{ option.icon }} {{ option.label }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="metadata-row">
+          <label>
+            BPM
+            <input type="number" formControlName="bpm" min="20" max="300" placeholder="Ex: 92" />
+          </label>
+          <label>
+            Tonalité
+            <select formControlName="key">
+              <option [ngValue]="null">—</option>
+              @for (key of musicalKeys; track key) {
+                <option [ngValue]="key">{{ key }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        @if (metadata.controls.bpm.invalid) {
+          <p class="field-error">Le BPM doit être compris entre 20 et 300.</p>
+        }
+
+        <label>
+          Genre
+          <input formControlName="genre" placeholder="Ex: Blues, Funk, Rock" />
+        </label>
+
+        <label>
+          Tags (séparés par des virgules)
+          <input formControlName="tags" placeholder="Ex: shuffle, lent, impro" />
+        </label>
+      </fieldset>
+
       @if (fileError()) {
         <p class="field-error">{{ fileError() }}</p>
       }
@@ -44,7 +85,7 @@
       <button
         type="button"
         (click)="upload(fileInput)"
-        [disabled]="!file || uploading()"
+        [disabled]="!file || uploading() || metadata.invalid"
         class="btn-upload"
       >
         @if (uploading()) {
@@ -67,26 +108,9 @@
         </button>
       </div>
 
-      <!-- Lecteur audio persistant avec morceau en cours -->
+      <!-- Lecteur audio partagé : il charge lui-même le flux de la piste choisie -->
       @if (currentTrack(); as track) {
-        <div class="player-container">
-          <div class="player-header">
-            <span class="playing-badge">EN COURS DE LECTURE</span>
-            <span class="playing-title"><b>{{ track.title }}</b> ({{ formatFormat(track.mimeType, track.originalName) }})</span>
-          </div>
-          
-          @if (audioLoading()) {
-            <p class="loading-text">Chargement du flux audio en mémoire…</p>
-          }
-
-          @if (audioError()) {
-            <p class="error">{{ audioError() }}</p>
-          }
-
-          @if (audioUrl()) {
-            <audio [src]="audioUrl()" controls autoplay class="audio-element" (error)="onAudioError()"></audio>
-          }
-        </div>
+        <app-audio-player [track]="track" />
       }
 
       @if (error()) {
@@ -101,54 +125,22 @@
         <!-- Liste sous forme de cards responsives -->
         <div class="tracks-list">
           @for (track of tracks(); track track.id) {
-            <div class="track-card" [class.is-playing]="currentTrack()?.id === track.id">
-              <div class="track-info">
-                <div class="track-title-row">
-                  <h3 class="track-title">{{ track.title }}</h3>
-                  <span class="badge-format">{{ formatFormat(track.mimeType, track.originalName) }}</span>
-                </div>
-                <div class="track-meta">
-                  <span class="track-file">📄 {{ track.originalName }}</span>
-                  <span class="track-dot">·</span>
-                  <span class="track-size">💾 {{ formatSize(track.size) }}</span>
-                  <span class="track-dot">·</span>
-                  <span class="track-date">📅 {{ formatDate(track.createdAt) }}</span>
-                </div>
-              </div>
-
-              <div class="track-actions">
-                <button
-                  type="button"
-                  class="btn-play"
-                  [class.active]="currentTrack()?.id === track.id"
-                  (click)="play(track)"
-                  [attr.aria-label]="'Écouter ' + track.title"
-                >
-                  @if (currentTrack()?.id === track.id && audioLoading()) {
-                    ⌛
-                  } @else if (currentTrack()?.id === track.id) {
-                    🔊 Écoute
-                  } @else {
-                    ▶ Écouter
-                  }
-                </button>
-
-                <button
-                  type="button"
-                  class="btn-delete"
-                  (click)="deleteTrack(track)"
-                  [disabled]="deletingId() !== null"
-                  [attr.aria-label]="'Supprimer ' + track.title"
-                  [title]="deletingId() === track.id ? 'Suppression en cours…' : 'Supprimer définitivement'"
-                >
-                  @if (deletingId() === track.id) {
-                    ⏳ Suppr…
-                  } @else {
-                    🗑
-                  }
-                </button>
-              </div>
-            </div>
+            <app-track-card
+              [track]="track"
+              [owned]="true"
+              [playing]="currentTrack()?.id === track.id"
+              [editing]="editingId() === track.id"
+              [busy]="savingId() === track.id"
+              [deleting]="deletingId() !== null"
+              (play)="play($event)"
+              (remove)="deleteTrack($event)"
+              (editStart)="editingId.set($event.id)"
+              (editCancel)="editingId.set(null)"
+              (save)="updateTrack(track, $event)"
+              [shareTargets]="shareTargetsOf(track)"
+              (share)="sharingTrack.set($event)"
+              (unshare)="unshare(track, $event)"
+            />
           } @empty {
             <div class="empty-state">
               <p>🎸 Aucune piste trouvée.</p>
@@ -182,4 +174,14 @@
       </div>
     </article>
   </div>
+
+  @if (sharingTrack(); as track) {
+    <app-share-dialog
+      [track]="track"
+      [friends]="friends()"
+      [busy]="savingId() === track.id"
+      (save)="saveShares($event)"
+      (cancel)="sharingTrack.set(null)"
+    />
+  }
 </section>

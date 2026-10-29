@@ -6,9 +6,10 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; }
-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 5vw; color: white; background: #123d32; }
+header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.6rem 1.5rem; padding: 1rem 5vw; color: white; background: #123d32; }
 header small { opacity: 0.7; }
-nav { display: flex; gap: 1rem; }
+nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+nav a { white-space: nowrap; }
 a { color: #1d755e; }
 header a { color: white; }
 main { max-width: 1050px; margin: 2rem auto; padding: 0 1rem; }

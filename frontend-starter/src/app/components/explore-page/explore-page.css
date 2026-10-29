@@ -1,0 +1,162 @@
+:host {
+  display: block;
+}
+
+.header-row {
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #e1ebe7;
+}
+
+.header-row h2 {
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Barre de recherche */
+.search-card {
+  margin-bottom: 1rem;
+}
+
+.search-main {
+  display: flex;
+  gap: 0.6rem;
+  align-items: stretch;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem;
+}
+
+.search-card select {
+  padding: 0.75rem;
+  border: 1px solid #b8cbc5;
+  border-radius: 8px;
+  background: white;
+  min-width: 0;
+}
+
+.btn-filters {
+  background: transparent;
+  color: #1d755e;
+  border: 1px solid #b8cbc5;
+  white-space: nowrap;
+}
+
+.btn-filters.active {
+  background: #eef5f2;
+  border-color: #1d755e;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 0 0.8rem;
+  margin-top: 0.4rem;
+}
+
+.filters label {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+}
+
+.filters input {
+  min-width: 0;
+}
+
+.search-card .field-error {
+  margin: 0.6rem 0 0;
+}
+
+.total-badge {
+  color: #61756f;
+  font-size: 0.85rem;
+}
+
+.btn-refresh {
+  background: transparent;
+  color: #1d755e;
+  border: 1px solid #b8cbc5;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background: #eef5f2;
+}
+
+.tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.explore-item {
+  position: relative;
+}
+
+.mine-badge {
+  position: absolute;
+  top: -0.5rem;
+  right: 0.8rem;
+  z-index: 1;
+  background: #1d755e;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.empty-state,
+.loading-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #61756f;
+  background: #f9fbfb;
+  border-radius: 10px;
+  border: 1px dashed #cce0d8;
+}
+
+.empty-state p {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #17312a;
+  margin: 0 0 0.5rem;
+}
+
+.pager {
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e1ebe7;
+}
+
+.page-indicator {
+  font-size: 0.9rem;
+}
+
+@media (max-width: 720px) {
+  .search-main {
+    flex-wrap: wrap;
+  }
+
+  .search-input {
+    flex-basis: 100%;
+  }
+
+  .filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
